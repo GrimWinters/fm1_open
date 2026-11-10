@@ -2584,7 +2584,8 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
         brick_mode ^= 1U;
         /* Both ways: audio switches and host LEDs start over, all button
          * LEDs off; the pages repaint theirs, the host resends its own. */
-        for (unsigned k = 0; k < 14; ++k) { fm1_led_set(k, 0); if (k < 5) fm1_brick_cc[k] = 0; }
+        for (unsigned k = 0; k < 14; ++k) { fm1_led_set(k, 0); if (k < 6) fm1_brick_cc[k] = 0; }
+        fm1_brick_on = brick_mode;
         brick_led_cache = button_led_cache = 0;
         brick_send(116, brick_mode ? 127 : 0);
         /* Entering, the pages see the second press, which cancels the first:

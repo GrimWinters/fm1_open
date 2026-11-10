@@ -25,7 +25,7 @@ FM-1 to host:
 | CC 102-115 | panel buttons: 127 pressed, 0 released. 102 OCT-, 103 OCT+, 104 FX, 105 SEL, 106 ENV, 107 LFO, 108 EDIT, 109 GLO, 110 HOME, 111 SAVE, 112 ARP, 113 SEQ, 114 PLAY/STOP, 115 REC |
 | CC 116 | brick mode: 127 on, 0 off |
 
-Notes from the keys go out as before (KEY OUT, see the SEQ MIDI pages).
+Notes from the keys go out over USB in brick mode (see CC 122 below).
 
 The master knob is not an encoder: it keeps setting the FM-1's volume.
 
@@ -39,6 +39,11 @@ switched on or off, so the host sends its state after CC 116):
 | CC 119 | bright button LED: 0 none, 1-14 = button 0-13 (same order as CC 102-115) |
 | CC 120 | dim button LEDs, buttons 0-6: bit n = button n |
 | CC 121 | dim button LEDs, buttons 7-13: bit n = button 7 + n |
+| CC 122 | keys play locally: >= 64, the note keys play the FM-1's own sound as well; below, they only go out as MIDI |
+
+In brick mode the note keys always go out over USB, whatever KEY OUT, OUT
+PORT and LOCAL say; CC 122 takes LOCAL's place. Leaving brick mode restores
+the MIDI page settings.
 
 In brick mode the host owns the 14 button LEDs. The LEDs only switch on and
 off, so dim is a software PWM: on 1 ms in 8.
@@ -51,6 +56,6 @@ mix is FM1 Open's own.
 
 - `app/screen.c`: `brick_input()` reads the panel before the pages do.
 - `app/audio_output.c`: `fm1_brick_cc`, and mute / dry once per block in `fm1_output_mix()`.
-- `app/midi_router.c`: stores CC 117-121 on channel 16 from any MIDI input.
+- `app/midi_router.c`: stores CC 117-122 on channel 16 from any MIDI input; in brick mode the keys follow CC 122.
 
 License as FM1 Open: GPL-3.0-only with the FM1 SDK linking exception.

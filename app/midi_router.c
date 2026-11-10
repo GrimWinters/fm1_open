@@ -287,14 +287,18 @@ int groove_midi_local(const uint8_t *m, size_t n)
     /* An Off/unmapped channel is intentionally silent, not a queue failure.
      * The panel interprets failure as a lost key and performs a global reset. */
     if (!targets) return 0;
-    int result = (config.flags & LOCAL_OFF) ? 0 : fm1_midi_post(m, n);
+    /* Brick mode: keys always go out over USB; the host says whether they
+     * also play the local sound (CC 122), instead of KEY OUT and LOCAL. */
+    unsigned flags = config.flags;
+    if (fm1_brick_on) flags = (flags & ~LOCAL_OFF) | LIVE_OUT | 2U | (fm1_brick_cc[5] >> 6 ? 0 : LOCAL_OFF);
+    int result = (flags & LOCAL_OFF) ? 0 : fm1_midi_post(m, n);
     if (result) { groove_midi_panic(); return result; }
-    if (!(config.flags & LIVE_OUT)) return 0;
+    if (!(flags & LIVE_OUT)) return 0;
     unsigned note = (m[0] & 0xe0U) == 0x80U;
     for (unsigned track=0;track<GROOVE_TRACKS;++track) if (targets & (1U<<track)) {
-        if (note && !(config.flags & LOCAL_OFF) && groove_arp_enabled(track) && groove_midi_mode(track)) continue;
+        if (note && !(flags & LOCAL_OFF) && groove_arp_enabled(track) && groove_midi_mode(track)) continue;
         uint8_t data[3] = {(uint8_t)((m[0] & 0xf0U) | channel(track)), m[1], n > 2 ? m[2] : 0};
-        send_event(8U + track, config.flags & 7U, data);
+        send_event(8U + track, flags & 7U, data);
     }
     return 0;
 }
@@ -321,7 +325,7 @@ void fm1_app_midi_received(unsigned source, const uint8_t *m, size_t n)
 {
     if (source >= 3 || !m || !n || n > 3) return;
     /* Brick mode host messages: CC 117-121 on channel 16 (brick_mode.md). */
-    if (n == 3 && m[0] == 0xbf && m[1] >= 117 && m[1] <= 121) { fm1_brick_cc[m[1] - 117] = m[2]; return; }
+    if (n == 3 && m[0] == 0xbf && m[1] >= 117 && m[1] <= 122) { fm1_brick_cc[m[1] - 117] = m[2]; return; }
     unsigned clock = m[0] == 0xf8 || m[0] == 0xfa || m[0] == 0xfb || m[0] == 0xfc || m[0] == 0xf2;
     if (clock && !groove_midi_clock_accept(source, m[0])) return;
     (void)fm1_midi_post(m, n);

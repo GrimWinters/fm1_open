@@ -7,7 +7,8 @@ static unsigned output_gain;
 static int32_t usb_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
 static int16_t bluetooth_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
 static int32_t dry_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
-volatile uint8_t fm1_brick_cc[5];
+volatile uint8_t fm1_brick_cc[6];
+unsigned fm1_brick_on;
 
 void fm1_output_reset(void) { output_gain = 0; }
 static inline __attribute__((always_inline)) int32_t limit(int64_t value)
