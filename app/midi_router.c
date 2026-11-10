@@ -317,13 +317,14 @@ int groove_midi_clock_accept(unsigned source, uint8_t status)
     }
     return source == auto_source;
 }
-/* Brick mode audio switches, CC on channel 16 (see brick_mode.md). */
+/* Brick mode audio switches: CC 117 mute, CC 118 dry, channel 16 (brick_mode.md). */
 void fm1_app_midi_received(unsigned source, const uint8_t *m, size_t n)
 {
     if (source >= 3 || !m || !n || n > 3) return;
     if (n == 3 && m[0] == 0xbf && (m[1] == 117 || m[1] == 118)) {
-        if (m[1] == 117) fm1_output_set_brick_mute(m[2] >= 64);
-        else fm1_output_set_brick_dry(m[2] >= 64);
+        const unsigned bit = m[1] == 117 ? FM1_BRICK_MUTE : FM1_BRICK_DRY;
+        const unsigned flags = fm1_output_brick();
+        fm1_output_set_brick(m[2] >= 64 ? flags | bit : flags & ~bit);
         return;
     }
     unsigned clock = m[0] == 0xf8 || m[0] == 0xfa || m[0] == 0xfb || m[0] == 0xfc || m[0] == 0xf2;

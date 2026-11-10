@@ -2562,64 +2562,41 @@ controls_done:
     return 1;
 }
 
-/* Brick mode: the FM-1 becomes a controller for Brickwave on a TrimUI Brick.
- * OCT- and OCT+ pressed together switch it on and off. While it is on, the
- * seven encoders and the panel buttons go out over USB MIDI (channel 16)
- * instead of to the FM-1's own pages; the note keys, the master knob and the
- * sound engine keep working. Protocol: brick_mode.md. */
-enum { BRICK_CH = 15, BRICK_CC_ENC = 20, BRICK_CC_BUTTON = 102, BRICK_CC_MODE = 116 };
-static unsigned brick_mode;
-static uint32_t brick_buttons;
-static void brick_send(uint8_t cc, uint8_t value)
+/* Brick mode (brick_mode.md): OCT- + OCT+ toggles it. While on, the encoders
+ * and panel buttons go out as USB MIDI on channel 16 instead of to the pages;
+ * note keys, master knob and engine keep working. */
+static unsigned brick_mode, brick_buttons;
+static void brick_send(unsigned cc, unsigned value)
 {
-    const uint8_t m[3] = {(uint8_t)(0xb0 | BRICK_CH), cc, value};
-    (void)fm1_midi_send_port(FM1_MIDI_USB, m, 3);   /* busy: drop, the next turn sends again */
+    const uint8_t m[3] = {0xbf, (uint8_t)cc, (uint8_t)value};
+    (void)fm1_midi_send_port(FM1_MIDI_USB, m, 3);
 }
-static void brick_input(struct fm1_controls *controls, uint32_t now)
+static void brick_input(struct fm1_controls *c, uint32_t now)
 {
-    const uint32_t both = BUTTON(OCT_DOWN) | BUTTON(OCT_UP);
-    const uint32_t pressed = controls->buttons & ~brick_buttons;
-    if ((controls->buttons & both) == both && (pressed & both)) {
-        brick_mode = !brick_mode;
-        brick_send(BRICK_CC_MODE, brick_mode ? 127 : 0);
-        if (brick_mode) {
-            /* Entering: let the FM-1 pages see this second octave press, so
-             * it cancels the first one and the octave stays where it was. */
-            brick_buttons = controls->buttons;
-            notice = "BRICK MODE ON";
-            notice_until = now + 800U;
-            return;
-        }
-        {
-            /* Leaving: the FM-1 pages never saw these presses, so the
-             * octave is unchanged. */
-            /* Hand the audio back too: the FM-1 is heard and records as usual. */
-            fm1_output_set_brick_dry(0);
-            fm1_output_set_brick_mute(0);
-            notice = "BRICK MODE OFF";
-            notice_until = now + 1200U;
-            brick_buttons = controls->buttons;
-            controls->buttons = 0;
-            return;
-        }
+    const unsigned both = BUTTON(OCT_DOWN) | BUTTON(OCT_UP), held = c->buttons, last = brick_buttons;
+    brick_buttons = held;
+    if ((held & both) == both && (held & ~last & both)) {
+        brick_mode ^= 1U;
+        brick_send(116, brick_mode ? 127 : 0);
+        /* Entering, the pages see the second press, which cancels the first:
+         * the octave is unchanged. Leaving, they see neither. */
+        if (brick_mode) return;
+        fm1_output_set_brick(0);
+        c->buttons = 0;
+        return;
     }
-    if (!brick_mode) { brick_buttons = controls->buttons; return; }
-
+    if (!brick_mode) return;
     for (unsigned i = 0; i < 7; ++i) {
-        int steps = controls->encoders[i];
-        if (!steps) continue;
-        if (steps > 63) steps = 63;
-        if (steps < -63) steps = -63;
-        brick_send((uint8_t)(BRICK_CC_ENC + i), (uint8_t)(64 + steps));   /* relative, 64 = no change */
-        controls->encoders[i] = 0;
+        int s = c->encoders[i];
+        if (!s) continue;
+        s = s > 63 ? 63 : s < -63 ? -63 : s;
+        brick_send(20 + i, (unsigned)(64 + s));   /* relative: 64 = no change */
+        c->encoders[i] = 0;
     }
-    const uint32_t changed = controls->buttons ^ brick_buttons;
-    for (unsigned b = 0; b < 14; ++b)
-        if (changed & BUTTON(b))
-            brick_send((uint8_t)(BRICK_CC_BUTTON + b), (controls->buttons & BUTTON(b)) ? 127 : 0);
-    brick_buttons = controls->buttons;
-    controls->buttons = 0;   /* the FM-1 pages do not see the buttons */
-    notice = "BRICK MODE  OCT- + OCT+ EXITS";
+    for (unsigned b = 0, x = held ^ last; x; ++b, x >>= 1)
+        if (x & 1U) brick_send(102 + b, (held >> b & 1U) ? 127 : 0);
+    c->buttons = 0;
+    notice = "BRICK MODE";
     notice_until = now + 500U;
 }
 
