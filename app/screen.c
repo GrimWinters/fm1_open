@@ -1024,13 +1024,13 @@ static __attribute__((noinline)) void draw_ble(const struct fm1_ble_status *stat
                 text(204, y + 4, signal, 1, DIM, bg);
             } else if (!i)
                 text(12, y + 4, status->state == FM1_BLE_SCANNING ? "LOOKING FOR MIDI DEVICES..."
-                    : "NO DEVICES - SELECT SCAN BELOW", 1, DIM, bg);
+                    : "NO DEVICES - SELECT SCAN", 1, DIM, bg);
         }
         static const char *const actions[] = {"> CONNECT SELECTED", "> SCAN", "> DISCONNECT", "> SETTINGS"};
         radio_line(1, 200, actions[ble_action], ACCENT);
     }
-    const char *error = ble_forget == 1 ? "FORGET MIDI PAIRS? SAVE YES / HOME NO"
-        : ble_forget == 2 && !status->pending && !status->error ? "PAIR AGAIN; FORGET FM1 ON PEER TOO"
+    const char *error = ble_forget == 1 ? "FORGET PAIRS? SAVE YES/HOME NO"
+        : ble_forget == 2 && !status->pending && !status->error ? "PAIR AGAIN; FORGET FM1 ON PEER"
         : groove_settings_status() ? "SETTINGS NOT SAVED - RETRY"
         : ble_result == -2 ? "BUSY - RETRY" : ble_result == -3 ? "RADIO AVAILABLE ON DEVICE"
         : ble_result ? "COMMAND UNAVAILABLE"
@@ -1299,7 +1299,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         text(8, 72, !groove_arp_enabled(track) ? "OFF - TAP ARP TO ENABLE" : groove_arp_setting(track, 5) ? "ON - HOLD LATCHES YOUR CHORD" : "ON - HOLD KEYS TO PLAY", 1, TEXT, BACK);
         text(8, 96, "SELECT TRACK  K1-K4 ADJUST", 1, DIM, BACK);
         text(8, 118, "RATE FOLLOWS BPM / MIDI CLOCK", 1, DIM, BACK);
-        text(8, 140, arp_page ? "RELEASE ALL KEYS FOR A NEW CHORD" : groove_pad_count(track) ? "DRUMS: RANGE / GATE UNAVAILABLE" : "UP / DOWN / UP-DOWN / RANDOM", 1, DIM, BACK);
+        text(8, 140, arp_page ? "RELEASE KEYS FOR NEW CHORD" : groove_pad_count(track) ? "DRUMS: NO RANGE / GATE" : "UP / DOWN / UP-DOWN / RANDOM", 1, DIM, BACK);
         text(8, 162, "SETTINGS SAVED WITH PROJECT", 1, DIM, BACK);
         text(8, 180, arp_page ? "2/2 SWING / HOLD  ALGO PAGE" : "1/2 NOTES  ALGO PAGE", 1, ACCENT, BACK);
         static const char *const rates[] = {"1/4", "1/8", "1/16", "1/32"};
@@ -2147,11 +2147,11 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
                 if (!post(0xff, 0, 0, 1)) return 0;
                 memset(key_note, 0xff, sizeof key_note); project_keys = 0; writing = 0; page = OVERVIEW;
             }
-            notice = r == -3 ? "COPY MATCHING STEP / PAGE / TRACK FIRST"
+            notice = r == -3 ? "COPY STEP/PAGE/TRACK FIRST"
                 : r == -2 ? "CHORD / LOCK TABLE FULL" : r ? "UNAVAILABLE / INCOMPATIBLE"
-                : operation == 2 ? "STEP COPIED - CHOOSE DESTINATION"
-                : operation == 3 ? "PAGE COPIED - CHOOSE DESTINATION"
-                : operation == 4 ? "TRACK COPIED - CHOOSE DESTINATION"
+                : operation == 2 ? "STEP COPIED - PICK TARGET"
+                : operation == 3 ? "PAGE COPIED - PICK TARGET"
+                : operation == 4 ? "TRACK COPIED - PICK TARGET"
                 : operation == 5 ? "STEP PASTED - UNDO AVAILABLE"
                 : operation == 6 ? "PAGE PASTED - UNDO AVAILABLE" : "DONE";
             notice_until = now + 2000U;
@@ -2310,7 +2310,7 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
                     for (unsigned i = 0; i < 4; ++i) if (controls->encoders[2 + i]) {
                         if (arp_page) { if (i < 2) groove_arp_edit(track, i + 4, controls->encoders[2 + i]); }
                         else if (groove_pad_count(track) && i >= 2) {
-                            notice = "RANGE / GATE FOR MELODIC TRACKS"; notice_until = now + 2000U;
+                            notice = "RANGE/GATE: MELODIC ONLY"; notice_until = now + 2000U;
                         } else groove_arp_edit(track, i, controls->encoders[2 + i]);
                     }
                 } else if (page == NAME) {
@@ -2468,7 +2468,7 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
                     if (controls->encoders[5]) {
                         groove_tempo_edit(controls->encoders[5]);
                         if (groove_clock_mode() == GROOVE_CLOCK_MIDI) {
-                            notice = "EXTERNAL CLOCK - USE INT FOR BPM";
+                            notice = "EXT CLOCK - USE INT FOR BPM";
                             notice_until = now + 2000U;
                         }
                     }
@@ -2663,7 +2663,7 @@ void groove_screen_control(void)
     writing = groove_edit_recording();
     if (writing) cursor = groove_edit_cursor();
     unsigned error = groove_edit_error();
-    if (error && !notice) { notice = error == 1 ? "RECORD STOPPED - MIDI QUEUE FULL" : "CHORD LIMIT - LAST NOTES KEPT"; notice_until = now + 2000U; }
+    if (error && !notice) { notice = error == 1 ? "REC STOPPED - MIDI QUEUE FULL" : "CHORD LIMIT - LAST NOTES KEPT"; notice_until = now + 2000U; }
     struct groove_view transport = {0};
     groove_get_view(track, cursor, &transport);
     cursor %= transport.sequence_length;
