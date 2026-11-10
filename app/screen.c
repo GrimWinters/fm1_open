@@ -741,7 +741,7 @@ static __attribute__((noinline, cold, minsize)) void fm_draw(const uint8_t patch
                    (fm_group == 1 || fm_group == 2 || fm_group == 6 || fm_group == 7)) {
             unsigned offset = op == 6 ? 126 : (5 - op) * 21;
             text(8, 80, "RATE / LEVEL PREVIEW", 1, DIM, BACK);
-            text(8, 94, "HIGH RATE = FAST   L3 HOLDS", 1, DIM, BACK);
+            text(8, 94, "HIGH = FAST  L3 HOLDS", 1, DIM, BACK);
             if (op == 6)
                 paint_fill(20, 134, 201, 1, PANEL);
             int x = 20, last_y = 166 - patch[offset + 7] * 64 / 99;
@@ -1036,7 +1036,7 @@ static __attribute__((noinline)) void draw_ble(const struct fm1_ble_status *stat
     }
     const char *error = ble_forget == 1 ? "FORGET PAIRS? SAVE YES/HOME NO"
         : ble_forget == 2 && !status->pending && !status->error ? "PAIR AGAIN; FORGET FM1 ON PEER"
-        : groove_settings_status() ? "SETTINGS NOT SAVED - RETRY"
+        : groove_settings_status() ? "NOT SAVED - RETRY"
         : ble_result == -2 ? "BUSY - RETRY" : ble_result == -3 ? "RADIO AVAILABLE ON DEVICE"
         : ble_result ? "COMMAND UNAVAILABLE"
         : status->error <= FM1_BLE_LINK_LOST ? errors[status->error] : "";
@@ -1108,11 +1108,11 @@ static __attribute__((noinline)) void preset_draw(void)
     text(38, 65, "/16", 2, DIM, BACK);
     text(8, 97, project_stored_result < 0 ? "READ ERROR" : project_stored, 2, TEXT, BACK);
     text(8, 127, "SELECT / PRESETS LOAD", 1, TEXT, BACK);
-    text(8, 148, "PLAY LOAD + RUN   SAVE PROJECT", 1, TEXT, BACK);
-    text(8, 170, "WHITE KEYS 1-16 LOAD DIRECTLY", 1, DIM, BACK);
+    text(8, 148, "PLAY LOAD+RUN  SAVE PROJECT", 1, TEXT, BACK);
+    text(8, 170, "WHITE KEYS 1-16 LOAD", 1, DIM, BACK);
     text(8, 191, "K1 BANK: USER / FACTORY", 1, DIM, BACK);
     text(8, 213, project_result == GROOVE_PROJECT_EMPTY ? "EMPTY SLOT" :
-         project_result ? "LOAD FAILED - CURRENT KEPT" : "HOME BACK   HOME+SAVE UNDO", 1,
+         project_result ? "LOAD FAILED" : "HOME BACK   HOME+SAVE UNDO", 1,
          project_result ? AMBER : DIM, BACK);
 }
 static __attribute__((noinline)) void name_draw(void)
@@ -1277,7 +1277,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         text(8, 78, source_names[source_preview], 2, ACCENT, BACK);
         text(8, 120, "SAVE APPLY  HOME CANCEL", 1, TEXT, BACK);
         text(8, 148, "NEW SOURCE RESETS TIMBRE", 1, DIM, BACK);
-        text(8, 165, "DRUM / PITCH CHANGE CLEARS STEPS", 1, AMBER, BACK);
+        text(8, 165, "DRUM/PITCH CLEARS STEPS", 1, AMBER, BACK);
         text(8, 196, source_result ? "NOT ENOUGH MEMORY - RETRY" : "UNDO IN HOLD SEQ MENU", 1, source_result ? AMBER : DIM, BACK);
         text(8, 231, "ALGO / K2 CHOOSE  SAVE APPLY", 1, DIM, BACK);
     } else if (visible == ACTIONS) {
@@ -1296,7 +1296,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
             paint_fill(6, y, 228, 17, bg);
             text(10, y + 5, actions[at], 1, at == action ? ACCENT : DIM, bg);
         }
-        text(8, 213, notice ? notice : "SELECT ACTION  SAVE EXECUTE", 1, TEXT, BACK);
+        text(8, 213, notice ? notice : "SELECT ACTION  SAVE DO", 1, TEXT, BACK);
         text(8, 231, action_confirm ? "SAVE CONFIRM   HOME CANCEL" : "PRESETS STEP  OCT PAGE  SAVE DO", 1, DIM, BACK);
     } else if (visible == ARP_EDIT) {
         text(8, 40, "ARPEGGIATOR", 2, ACCENT, BACK);
@@ -1304,9 +1304,9 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         number(198, 40, track + 1, 1, 2, colors[track], BACK);
         text(8, 72, !groove_arp_enabled(track) ? "OFF - TAP ARP TO ENABLE" : groove_arp_setting(track, 5) ? "ON - HOLD LATCHES CHORD" : "ON - HOLD KEYS TO PLAY", 1, TEXT, BACK);
         text(8, 96, "SELECT TRACK  K1-K4 ADJUST", 1, DIM, BACK);
-        text(8, 118, "RATE FOLLOWS BPM / MIDI CLOCK", 1, DIM, BACK);
+        text(8, 118, "RATE FOLLOWS BPM/CLOCK", 1, DIM, BACK);
         text(8, 140, arp_page ? "RELEASE KEYS FOR NEW CHORD" : groove_pad_count(track) ? "DRUMS: NO RANGE / GATE" : "UP / DOWN / UP-DOWN / RANDOM", 1, DIM, BACK);
-        text(8, 162, "SETTINGS SAVED WITH PROJECT", 1, DIM, BACK);
+        text(8, 162, "SAVED WITH PROJECT", 1, DIM, BACK);
         text(8, 180, arp_page ? "2/2 SWING / HOLD  ALGO PAGE" : "1/2 NOTES  ALGO PAGE", 1, ACCENT, BACK);
         static const char *const rates[] = {"1/4", "1/8", "1/16", "1/32"};
         static const char *const modes[] = {"UP", "DOWN", "UP-DN", "RANDOM"};
@@ -1334,7 +1334,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         text(70, 72, name, 2, TEXT, BACK);
         text(8, 102, "PRESETS SELECT VOICE", 1, TEXT, BACK);
         text(8, 126, "HOLD EDIT: OPERATOR PARAMS", 1, DIM, BACK);
-        text(8, 148, "ENV ENVELOPE    LFO MODULATION", 1, DIM, BACK);
+        text(8, 148, "ENV ENVELOPE  LFO MOD", 1, DIM, BACK);
         text(8, 170, "SEL SCALING     KEYS PLAY", 1, DIM, BACK);
         static const char *const labels[] = {"ALGORITHM", "FEEDBACK", "TRANSPOSE", "LEVEL"};
         int values[] = {frame_patch[134] + 1, frame_patch[135], (int)frame_patch[144] - 24, frame_views[track].volume};
@@ -1558,7 +1558,7 @@ static void draw_page_body(const struct fm1_ble_status *ble)
     if (notice && (int32_t)(frame_time - notice_until) >= 0) notice = NULL;
     const char *hint = notice ? notice : source_result ? "SOURCE MEMORY FULL - RETRY"
                        : v->clock_mode && v->clock_state != GROOVE_CLOCK_LOCKED
-                           ? "WAIT MIDI CLOCK - SYNC: INT/MIDI"
+                           ? "WAIT MIDI CLOCK"
                        : writing && groove_sequence_count_in() ? "COUNT IN - REC ON NEXT BAR"
                        : writing ? v->playing ? "LIVE REC - REC TO FINISH"
                                                              : "STEP REC - REC TO FINISH"
@@ -2021,7 +2021,7 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
         if (!release_keys()) return 0;
         blocked_keys |= controls->keys;
         groove_arp_set(track, !groove_arp_enabled(track));
-        notice = groove_arp_enabled(track) ? "ARP ON / HOLD ARP FOR SETTINGS" : "ARP OFF / LIVE KEYS";
+        notice = groove_arp_enabled(track) ? "ARP ON / HOLD FOR SETTINGS" : "ARP OFF / LIVE KEYS";
         notice_until = now + 2000U;
     }
     if (pressed & BUTTON(REC)) {
@@ -2294,7 +2294,7 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
                         sequence_length_adjust(controls->encoders[4]);
                         groove_settings_midi(track,6,controls->encoders[5]);
                         if (controls->encoders[3] && groove_clock_mode()) {
-                            notice = "EXT CLOCK - SET BPM AT SOURCE"; notice_until = now + 2000U;
+                            notice = "EXT CLOCK - SET BPM THERE"; notice_until = now + 2000U;
                         }
                     } else if (seq_page == 7) {
                         if (controls->encoders[2] || controls->encoders[3]) { blocked_keys |= controls->keys; if (!release_keys()) return 0; }
@@ -2474,7 +2474,7 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
                     if (controls->encoders[5]) {
                         groove_tempo_edit(controls->encoders[5]);
                         if (groove_clock_mode() == GROOVE_CLOCK_MIDI) {
-                            notice = "EXT CLOCK - USE INT FOR BPM";
+                            notice = "EXT CLOCK: USE INT";
                             notice_until = now + 2000U;
                         }
                     }
@@ -2647,7 +2647,7 @@ void groove_screen_control(void)
         } else if (health.midi_dropped != health_dropped) {
             notice = "MIDI FULL - NOTES RESET"; notice_until = now + 2500U;
         } else if (groove_midi_dropped() != health_output) {
-            notice = "MIDI OUT FULL - NOTES RESET"; notice_until = now + 2500U;
+            notice = "MIDI OUT FULL - RESET"; notice_until = now + 2500U;
         } else if (adapted > health_adapted) {
             notice = "CPU GUARD - VOICES ADAPTED"; notice_until = now + 2500U;
         }
@@ -2679,7 +2679,7 @@ void groove_screen_control(void)
     writing = groove_edit_recording();
     if (writing) cursor = groove_edit_cursor();
     unsigned error = groove_edit_error();
-    if (error && !notice) { notice = error == 1 ? "REC STOPPED - MIDI QUEUE FULL" : "CHORD LIMIT - LAST NOTES KEPT"; notice_until = now + 2000U; }
+    if (error && !notice) { notice = error == 1 ? "REC STOPPED - QUEUE FULL" : "CHORD LIMIT - LAST KEPT"; notice_until = now + 2000U; }
     struct groove_view transport = {0};
     groove_get_view(track, cursor, &transport);
     cursor %= transport.sequence_length;
