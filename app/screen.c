@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
+#include "audio_output.h"
 #include "instrument.h"
 #include "fm_patch.h"
 #include "version.h"
@@ -2561,11 +2562,73 @@ controls_done:
     return 1;
 }
 
+/* Brick mode: the FM-1 becomes a controller for Brickwave on a TrimUI Brick.
+ * OCT- and OCT+ pressed together switch it on and off. While it is on, the
+ * seven encoders and the panel buttons go out over USB MIDI (channel 16)
+ * instead of to the FM-1's own pages; the note keys, the master knob and the
+ * sound engine keep working. Protocol: brick_mode.md. */
+enum { BRICK_CH = 15, BRICK_CC_ENC = 20, BRICK_CC_BUTTON = 102, BRICK_CC_MODE = 116 };
+static unsigned brick_mode;
+static uint32_t brick_buttons;
+static void brick_send(uint8_t cc, uint8_t value)
+{
+    const uint8_t m[3] = {(uint8_t)(0xb0 | BRICK_CH), cc, value};
+    (void)fm1_midi_send_port(FM1_MIDI_USB, m, 3);   /* busy: drop, the next turn sends again */
+}
+static void brick_input(struct fm1_controls *controls, uint32_t now)
+{
+    const uint32_t both = BUTTON(OCT_DOWN) | BUTTON(OCT_UP);
+    const uint32_t pressed = controls->buttons & ~brick_buttons;
+    if ((controls->buttons & both) == both && (pressed & both)) {
+        brick_mode = !brick_mode;
+        brick_send(BRICK_CC_MODE, brick_mode ? 127 : 0);
+        if (brick_mode) {
+            /* Entering: let the FM-1 pages see this second octave press, so
+             * it cancels the first one and the octave stays where it was. */
+            brick_buttons = controls->buttons;
+            notice = "BRICK MODE ON";
+            notice_until = now + 800U;
+            return;
+        }
+        {
+            /* Leaving: the FM-1 pages never saw these presses, so the
+             * octave is unchanged. */
+            /* Hand the audio back too: the FM-1 is heard and records as usual. */
+            fm1_output_set_brick_dry(0);
+            fm1_output_set_brick_mute(0);
+            notice = "BRICK MODE OFF";
+            notice_until = now + 1200U;
+            brick_buttons = controls->buttons;
+            controls->buttons = 0;
+            return;
+        }
+    }
+    if (!brick_mode) { brick_buttons = controls->buttons; return; }
+
+    for (unsigned i = 0; i < 7; ++i) {
+        int steps = controls->encoders[i];
+        if (!steps) continue;
+        if (steps > 63) steps = 63;
+        if (steps < -63) steps = -63;
+        brick_send((uint8_t)(BRICK_CC_ENC + i), (uint8_t)(64 + steps));   /* relative, 64 = no change */
+        controls->encoders[i] = 0;
+    }
+    const uint32_t changed = controls->buttons ^ brick_buttons;
+    for (unsigned b = 0; b < 14; ++b)
+        if (changed & BUTTON(b))
+            brick_send((uint8_t)(BRICK_CC_BUTTON + b), (controls->buttons & BUTTON(b)) ? 127 : 0);
+    brick_buttons = controls->buttons;
+    controls->buttons = 0;   /* the FM-1 pages do not see the buttons */
+    notice = "BRICK MODE  OCT- + OCT+ EXITS";
+    notice_until = now + 500U;
+}
+
 void groove_screen_control(void)
 {
     struct fm1_controls controls;
     fm1_controls_read(&controls);
     uint32_t now = fm1_millis(), key_down = controls.keys & ~previous_keys;
+    brick_input(&controls, now);
     unsigned master_changed = groove_master_update(controls.knob);
     if (master_changed && (!notice || notice == master_notice || (int32_t)(now - notice_until) >= 0)) {
         unsigned level = fm1_engine_output_level();
