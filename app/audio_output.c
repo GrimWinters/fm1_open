@@ -6,11 +6,6 @@
 static unsigned output_gain;
 static int32_t usb_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
 static int16_t bluetooth_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
-static int32_t dry_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
-static volatile uint8_t brick_flags;
-
-void fm1_output_set_brick(unsigned flags) { brick_flags = (uint8_t)flags; }
-unsigned fm1_output_brick(void) { return brick_flags; }
 
 void fm1_output_reset(void) { output_gain = 0; }
 static inline __attribute__((always_inline)) int32_t limit(int64_t value)
@@ -35,13 +30,10 @@ FM1_AUDIO_CODE void fm1_output_mix(int32_t *output)
     unsigned right = ((unsigned)usb_gain[1] * output_gain) >> 7;
     /* Accumulate USB before clipping, then add Bluetooth.
      * Discard the block if the USB stream resets. */
-    const unsigned dry = brick_flags & FM1_BRICK_DRY, mute = brick_flags & FM1_BRICK_MUTE;
     for (unsigned i = 0; i < FM1_BLOCK_WORDS; ++i) {
-        const int64_t synth = ((int64_t)output[i] * output_gain) >> 7;
-        int64_t value = mute ? 0 : synth;
+        int64_t value = ((int64_t)output[i] * output_gain) >> 7;
         if (usb_frames == FM1_BLOCK_FRAMES)
             value += ((int64_t)usb_pcm[i] * ((i & 1U) ? right : left)) >> 7;
-        if (dry) dry_pcm[i] = usb_frames == -2 ? 0 : limit(synth);
         output[i] = usb_frames == -2 ? 0 : limit(value);
     }
     if (fm1_bluetooth_audio_read(bluetooth_pcm, FM1_BLOCK_FRAMES) == FM1_BLOCK_FRAMES) {
@@ -52,5 +44,5 @@ FM1_AUDIO_CODE void fm1_output_mix(int32_t *output)
             output[i] = value > 8388607 ? 8388607 : value < -8388608 ? -8388608 : value;
         }
     }
-    (void)fm1_usb_audio_write(dry ? dry_pcm : output, FM1_BLOCK_FRAMES);
+    (void)fm1_usb_audio_write(output, FM1_BLOCK_FRAMES);
 }

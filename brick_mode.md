@@ -13,8 +13,7 @@ works as before.
 - In brick mode the seven encoders and the panel buttons control Brickwave
   instead of the FM-1's pages. The note keys, the master knob and the FM-1's
   sound engine keep working as usual.
-- Press OCT- and OCT+ together again to leave. Leaving also switches the two
-  audio options below back off.
+- Press OCT- and OCT+ together again to leave.
 
 ## Protocol (USB MIDI, channel 16)
 
@@ -22,25 +21,23 @@ FM-1 to host:
 
 | Message | Meaning |
 | --- | --- |
-| CC 20-26 | encoders 0-6, relative: 64 = no change, 65 = +1 step, 63 = -1 step, up to +/-63 |
-| CC 102-115 | panel buttons 0-13: 127 pressed, 0 released (OCT-, OCT+, FX, SCL, ENV, LFO, EDIT, GLO, HOME, SAVE, ARP, SEQ, PLAY, REC) |
+| CC 20-26 | encoders, relative: 64 = no change, 65 = +1 step, 63 = -1 step, up to +/-63. 20 Select, 21 Algorithm, 22-25 knobs 1-4, 26 Presets |
+| CC 102-115 | panel buttons: 127 pressed, 0 released. 102 OCT-, 103 OCT+, 104 FX, 105 SEL, 106 ENV, 107 LFO, 108 EDIT, 109 GLO, 110 HOME, 111 SAVE, 112 ARP, 113 SEQ, 114 PLAY/STOP, 115 REC |
 | CC 116 | brick mode: 127 on, 0 off |
 
 Notes from the keys go out as before (KEY OUT, see the SEQ MIDI pages).
 
-Host to FM-1:
+The master knob is not an encoder: it keeps setting the FM-1's volume.
 
-| Message | Meaning |
-| --- | --- |
-| CC 117 | mute local synth: >= 64 the FM-1's own sound is not heard at its outputs, only USB playback is |
-| CC 118 | dry USB recording: >= 64 USB recording carries the synth only, without the USB playback (no feedback loop when the host processes the FM-1 and plays it back) |
-
-Both audio options start off at power-up and switch off when brick mode is left.
+Planned, host to FM-1: CC 117 (mute the FM-1's own sound locally) and CC 118
+(USB recording without the USB playback, for effect mode). A first version
+changed the audio interrupt for this and caused audible crackles, even with
+brick mode off, so it was taken out; it will come back outside the audio
+path.
 
 ## Code
 
 - `app/screen.c`: `brick_input()` reads the panel before the pages do.
-- `app/audio_output.c`: dry USB recording and local mute in `fm1_output_mix()`.
-- `app/midi_router.c`: CC 117 / 118 on channel 16 from any MIDI input.
+- Nothing else changes: the audio path is the same as in FM1 Open.
 
 License as FM1 Open: GPL-3.0-only with the FM1 SDK linking exception.

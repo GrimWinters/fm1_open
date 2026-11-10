@@ -1,5 +1,4 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
-#include "audio_output.h"
 #include "instrument.h"
 #include "fm_patch.h"
 #include "version.h"
@@ -2580,9 +2579,7 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
         brick_send(116, brick_mode ? 127 : 0);
         /* Entering, the pages see the second press, which cancels the first:
          * the octave is unchanged. Leaving, they see neither. */
-        if (brick_mode) return;
-        fm1_output_set_brick(0);
-        c->buttons = 0;
+        if (!brick_mode) c->buttons = 0;
         return;
     }
     if (!brick_mode) return;
