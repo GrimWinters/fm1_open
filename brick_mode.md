@@ -8,8 +8,8 @@ works as before.
 ## Using it
 
 - Connect the FM-1 to the Brick's rear USB-C port.
-- Press **OCT-** and **OCT+** together: the FM-1 shows `BRICK MODE ON`, and
-  while it is on, the status line reads `BRICK MODE  OCT- + OCT+ EXITS`.
+- Press **OCT-** and **OCT+** together: while brick mode is on, the status
+  line shows `BRICK MODE` each time you turn an encoder or press a button.
 - In brick mode the seven encoders and the panel buttons control Brickwave
   instead of the FM-1's pages. The note keys, the master knob and the FM-1's
   sound engine keep working as usual.
