@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
 #include "instrument.h"
+#include "audio_output.h"
 #include "fm_patch.h"
 #include "version.h"
 #include "fm1_engine_control.h"
@@ -244,6 +245,11 @@ struct draw_cache {
 static struct draw_cache saved_cache, band_cache, *cache = &saved_cache;
 static uint32_t led_cache;
 static uint16_t button_led_cache;
+/* Brick mode (brick_mode.md). The host sets the button LEDs through
+ * fm1_brick_cc: one bright, a mask dim (software PWM, see brick_input). */
+static unsigned brick_mode, brick_buttons;
+static uint16_t brick_led_cache;
+static uint32_t brick_pwm;
 static struct groove_view frame_views[GROOVE_TRACKS];
 static uint8_t frame_step_notes[16], frame_effects[4];
 static uint8_t frame_patch[156];
@@ -596,7 +602,7 @@ static void step_adjust(unsigned bank, const int16_t *encoders, uint32_t now)
         unsigned setting = bank * 4 + i;
         if (setting < 7) {
             if (groove_step_setting_edit(track, cursor, setting, encoders[2 + i])) {
-                notice = "UNAVAILABLE / CHORD OR LOCK FULL"; notice_until = now + 2000U;
+                notice = "N/A: CHORD OR LOCK FULL"; notice_until = now + 2000U;
             }
         } else if (!groove_pad_count(track)) {
             struct groove_view v = {0}; groove_get_view(track, cursor, &v);
@@ -1001,7 +1007,7 @@ static __attribute__((noinline)) void draw_ble(const struct fm1_ble_status *stat
             text(146, y, names[i], 2, i && i < 3 && !on ? DIM : ACCENT, BACK);
         }
         const char *audio = !on || !values[1] ? "AUDIO OFF" : frame_radio.audio_playing ? "AUDIO PLAYING"
-            : frame_radio.audio_connected ? "AUDIO CONNECTED" : "AUDIO WAITING FOR CONNECTION";
+            : frame_radio.audio_connected ? "AUDIO CONNECTED" : "AUDIO WAITING TO CONNECT";
         radio_line(1, 184, audio, frame_radio.audio_playing ? GREEN : DIM);
         radio_line(2, 196, ble_action ? "> FORGET MIDI PAIRS" : "> MIDI DEVICE LIST (HOST)", ACCENT);
     } else {
@@ -1022,7 +1028,7 @@ static __attribute__((noinline)) void draw_ble(const struct fm1_ble_status *stat
                 decimal(signal, device->rssi, 1);
                 text(204, y + 4, signal, 1, DIM, bg);
             } else if (!i)
-                text(12, y + 4, status->state == FM1_BLE_SCANNING ? "LOOKING FOR MIDI DEVICES..."
+                text(12, y + 4, status->state == FM1_BLE_SCANNING ? "SEARCHING MIDI..."
                     : "NO DEVICES - SELECT SCAN", 1, DIM, bg);
         }
         static const char *const actions[] = {"> CONNECT SELECTED", "> SCAN", "> DISCONNECT", "> SETTINGS"};
@@ -1105,7 +1111,7 @@ static __attribute__((noinline)) void preset_draw(void)
     text(8, 148, "PLAY LOAD + RUN   SAVE PROJECT", 1, TEXT, BACK);
     text(8, 170, "WHITE KEYS 1-16 LOAD DIRECTLY", 1, DIM, BACK);
     text(8, 191, "K1 BANK: USER / FACTORY", 1, DIM, BACK);
-    text(8, 213, project_result == GROOVE_PROJECT_EMPTY ? "EMPTY SLOT - CHOOSE ANOTHER" :
+    text(8, 213, project_result == GROOVE_PROJECT_EMPTY ? "EMPTY SLOT" :
          project_result ? "LOAD FAILED - CURRENT KEPT" : "HOME BACK   HOME+SAVE UNDO", 1,
          project_result ? AMBER : DIM, BACK);
 }
@@ -1233,6 +1239,7 @@ static void leds(const struct groove_view *v, unsigned visible)
         | ((visible == FM_EDIT || visible == TONE_EDIT || visible == FM_QUICK || visible == STEP_EDIT) << EDIT)
         | ((visible == FM_ENV) << ENV) | ((visible == FM_LFO) << LFO)
         | ((visible == PROJECT || visible == SOURCE || (visible == ACTIONS && action_confirm)) << SAVE);
+    if (brick_mode) return;   /* the host drives the button LEDs */
     changed = bits ^ button_led_cache;
     for (unsigned key = 0; key < 14; ++key)
         if (changed & (1U << key)) fm1_led_set(key, (bits >> key) & 1U);
@@ -1269,7 +1276,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         text(8, 42, "SELECT SOUND SOURCE", 1, TEXT, BACK);
         text(8, 78, source_names[source_preview], 2, ACCENT, BACK);
         text(8, 120, "SAVE APPLY  HOME CANCEL", 1, TEXT, BACK);
-        text(8, 148, "NEW SOURCE RESETS ITS TIMBRE", 1, DIM, BACK);
+        text(8, 148, "NEW SOURCE RESETS TIMBRE", 1, DIM, BACK);
         text(8, 165, "DRUM / PITCH CHANGE CLEARS STEPS", 1, AMBER, BACK);
         text(8, 196, source_result ? "NOT ENOUGH MEMORY - RETRY" : "UNDO IN HOLD SEQ MENU", 1, source_result ? AMBER : DIM, BACK);
         text(8, 231, "ALGO / K2 CHOOSE  SAVE APPLY", 1, DIM, BACK);
@@ -1295,7 +1302,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         text(8, 40, "ARPEGGIATOR", 2, ACCENT, BACK);
         text(184, 40, "T", 2, colors[track], BACK);
         number(198, 40, track + 1, 1, 2, colors[track], BACK);
-        text(8, 72, !groove_arp_enabled(track) ? "OFF - TAP ARP TO ENABLE" : groove_arp_setting(track, 5) ? "ON - HOLD LATCHES YOUR CHORD" : "ON - HOLD KEYS TO PLAY", 1, TEXT, BACK);
+        text(8, 72, !groove_arp_enabled(track) ? "OFF - TAP ARP TO ENABLE" : groove_arp_setting(track, 5) ? "ON - HOLD LATCHES CHORD" : "ON - HOLD KEYS TO PLAY", 1, TEXT, BACK);
         text(8, 96, "SELECT TRACK  K1-K4 ADJUST", 1, DIM, BACK);
         text(8, 118, "RATE FOLLOWS BPM / MIDI CLOCK", 1, DIM, BACK);
         text(8, 140, arp_page ? "RELEASE KEYS FOR NEW CHORD" : groove_pad_count(track) ? "DRUMS: NO RANGE / GATE" : "UP / DOWN / UP-DOWN / RANDOM", 1, DIM, BACK);
@@ -1326,7 +1333,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         text(56, 76, frame_views[track].modified ? "*" : " ", 1, AMBER, BACK);
         text(70, 72, name, 2, TEXT, BACK);
         text(8, 102, "PRESETS SELECT VOICE", 1, TEXT, BACK);
-        text(8, 126, "HOLD EDIT OPERATOR PARAMETERS", 1, DIM, BACK);
+        text(8, 126, "HOLD EDIT: OPERATOR PARAMS", 1, DIM, BACK);
         text(8, 148, "ENV ENVELOPE    LFO MODULATION", 1, DIM, BACK);
         text(8, 170, "SEL SCALING     KEYS PLAY", 1, DIM, BACK);
         static const char *const labels[] = {"ALGORITHM", "FEEDBACK", "TRANSPOSE", "LEVEL"};
@@ -1551,10 +1558,10 @@ static void draw_page_body(const struct fm1_ble_status *ble)
     if (notice && (int32_t)(frame_time - notice_until) >= 0) notice = NULL;
     const char *hint = notice ? notice : source_result ? "SOURCE MEMORY FULL - RETRY"
                        : v->clock_mode && v->clock_state != GROOVE_CLOCK_LOCKED
-                           ? "WAIT MIDI CLOCK - SEQ SYNC: INT/MIDI"
-                       : writing && groove_sequence_count_in() ? "COUNT IN - RECORD ON NEXT BAR"
-                       : writing ? v->playing ? "LIVE REC - PLAY KEYS  REC TO FINISH"
-                                                             : "STEP REC - PLAY KEYS  REC TO FINISH"
+                           ? "WAIT MIDI CLOCK - SYNC: INT/MIDI"
+                       : writing && groove_sequence_count_in() ? "COUNT IN - REC ON NEXT BAR"
+                       : writing ? v->playing ? "LIVE REC - REC TO FINISH"
+                                                             : "STEP REC - REC TO FINISH"
                        : visible == OVERVIEW && (previous_buttons & BUTTON(HOME))
                            ? "PRESETS SOURCE  EDIT PARAMETERS"
                        : visible == OVERVIEW ? "PRESETS PRESET  ALGO ENGINE"
@@ -1729,7 +1736,7 @@ static int preset_load(unsigned start, uint32_t now)
     memset(drum_parts, 0, sizeof drum_parts);
     selected_note = groove_pad_count(track) ? groove_pad_note(track, 0) : 60;
     page = music_page = OVERVIEW;
-    notice = start ? "PRESET LOADED - PLAYING" : "PRESET LOADED - PLAY TO START";
+    notice = start ? "PRESET LOADED - PLAYING" : "LOADED - PLAY TO START";
     notice_until = now + 2000U;
     if (start) {
         struct groove_view view = {0}; groove_get_view(track, cursor, &view);
@@ -1911,7 +1918,7 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
     if ((controls->buttons & (BUTTON(HOME) | BUTTON(SAVE))) == (BUTTON(HOME) | BUTTON(SAVE)) &&
         (pressed & (BUTTON(HOME) | BUTTON(SAVE)))) {
         int r = groove_edit_undo();
-        notice = r ? "NOTHING TO UNDO / STOP REC FIRST" : "UNDO / REDO APPLIED";
+        notice = r ? "NO UNDO / STOP REC FIRST" : "UNDO / REDO APPLIED";
         notice_until = now + 2000U;
         page = music_page;
         goto controls_done;
@@ -2151,8 +2158,8 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
                 : operation == 2 ? "STEP COPIED - PICK TARGET"
                 : operation == 3 ? "PAGE COPIED - PICK TARGET"
                 : operation == 4 ? "TRACK COPIED - PICK TARGET"
-                : operation == 5 ? "STEP PASTED - UNDO AVAILABLE"
-                : operation == 6 ? "PAGE PASTED - UNDO AVAILABLE" : "DONE";
+                : operation == 5 ? "STEP PASTED - UNDO OK"
+                : operation == 6 ? "PAGE PASTED - UNDO OK" : "DONE";
             notice_until = now + 2000U;
             cache->middle_cache = ~0U;
         }
@@ -2287,20 +2294,20 @@ static int apply_controls(const struct fm1_controls *controls, uint32_t now,
                         sequence_length_adjust(controls->encoders[4]);
                         groove_settings_midi(track,6,controls->encoders[5]);
                         if (controls->encoders[3] && groove_clock_mode()) {
-                            notice = "EXT CLOCK - CHANGE BPM AT SOURCE"; notice_until = now + 2000U;
+                            notice = "EXT CLOCK - SET BPM AT SOURCE"; notice_until = now + 2000U;
                         }
                     } else if (seq_page == 7) {
                         if (controls->encoders[2] || controls->encoders[3]) { blocked_keys |= controls->keys; if (!release_keys()) return 0; }
                         for (unsigned i=0;i<2;++i) if (controls->encoders[2+i]) {
                             int r=groove_settings_track(track,i,controls->encoders[2+i]);
-                            notice=r ? "TRACK SETTING FAILED" : "TRACK SETTING - NOTES RELEASED";
+                            notice=r ? "TRACK SETTING FAILED" : "TRACK SET - NOTES RELEASED";
                             notice_until=now+1500U;
                         }
                     } else if (seq_page >= 5) {
                         static const uint8_t parameters[2][4] = {{0,1,2,4},{3,5,7,8}};
                         for (unsigned i = 0; i < 4; ++i) if (controls->encoders[2+i]) {
                             groove_settings_midi(track,parameters[seq_page-5][i],controls->encoders[2+i]);
-                            notice = "MIDI SETTING - NOTES RELEASED"; notice_until = now + 1500U;
+                            notice = "MIDI SET - NOTES RELEASED"; notice_until = now + 1500U;
                         }
                     }
                 }
@@ -2564,7 +2571,6 @@ controls_done:
 /* Brick mode (brick_mode.md): OCT- + OCT+ toggles it. While on, the encoders
  * and panel buttons go out as USB MIDI on channel 16 instead of to the pages;
  * note keys, master knob and engine keep working. */
-static unsigned brick_mode, brick_buttons;
 static void brick_send(unsigned cc, unsigned value)
 {
     const uint8_t m[3] = {0xbf, (uint8_t)cc, (uint8_t)value};
@@ -2576,6 +2582,10 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
     brick_buttons = held;
     if ((held & both) == both && (held & ~last & both)) {
         brick_mode ^= 1U;
+        /* Both ways: audio switches and host LEDs start over, all button
+         * LEDs off; the pages repaint theirs, the host resends its own. */
+        for (unsigned k = 0; k < 14; ++k) { fm1_led_set(k, 0); if (k < 5) fm1_brick_cc[k] = 0; }
+        brick_led_cache = button_led_cache = 0;
         brick_send(116, brick_mode ? 127 : 0);
         /* Entering, the pages see the second press, which cancels the first:
          * the octave is unchanged. Leaving, they see neither. */
@@ -2595,6 +2605,14 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
     c->buttons = 0;
     notice = "BRICK MODE";
     notice_until = now + 500U;
+    /* Dim LEDs: on during 1 ms of every 8 (or one pass, if passes are slower). */
+    unsigned on = fm1_brick_cc[2] ? 1U << (fm1_brick_cc[2] - 1U) : 0;   /* 1..14 = button 0..13 */
+    if (now - brick_pwm >= 8U) brick_pwm = now;
+    if (now == brick_pwm) on |= fm1_brick_cc[3] | fm1_brick_cc[4] << 7;
+    on &= 0x3fffU;
+    for (unsigned k = 0, x = on ^ brick_led_cache; x; ++k, x >>= 1)
+        if (x & 1U) fm1_led_set(k, on >> k & 1U);
+    brick_led_cache = (uint16_t)on;
 }
 
 void groove_screen_control(void)
@@ -2624,7 +2642,7 @@ void groove_screen_control(void)
         fm1_audio_stats_read(&dma);
         unsigned adapted = audio.adapted;
         if (health.underruns != health_underruns || dma.overruns != health_dma) {
-            notice = "AUDIO OVERLOAD - REDUCE VOICES"; notice_until = now + 2500U;
+            notice = "OVERLOAD - REDUCE VOICES"; notice_until = now + 2500U;
         } else if (health.midi_dropped != health_dropped) {
             notice = "MIDI FULL - NOTES RESET"; notice_until = now + 2500U;
         } else if (groove_midi_dropped() != health_output) {

@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
+#include "audio_output.h"
 #include "instrument.h"
 #include "fm1_engine_control.h"
 #include <string.h>
@@ -319,6 +320,8 @@ int groove_midi_clock_accept(unsigned source, uint8_t status)
 void fm1_app_midi_received(unsigned source, const uint8_t *m, size_t n)
 {
     if (source >= 3 || !m || !n || n > 3) return;
+    /* Brick mode host messages: CC 117-121 on channel 16 (brick_mode.md). */
+    if (n == 3 && m[0] == 0xbf && m[1] >= 117 && m[1] <= 121) { fm1_brick_cc[m[1] - 117] = m[2]; return; }
     unsigned clock = m[0] == 0xf8 || m[0] == 0xfa || m[0] == 0xfb || m[0] == 0xfc || m[0] == 0xf2;
     if (clock && !groove_midi_clock_accept(source, m[0])) return;
     (void)fm1_midi_post(m, n);

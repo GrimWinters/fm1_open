@@ -29,15 +29,28 @@ Notes from the keys go out as before (KEY OUT, see the SEQ MIDI pages).
 
 The master knob is not an encoder: it keeps setting the FM-1's volume.
 
-Planned, host to FM-1: CC 117 (mute the FM-1's own sound locally) and CC 118
-(USB recording without the USB playback, for effect mode). A first version
-changed the audio interrupt for this and caused audible crackles, even with
-brick mode off, so it was taken out; it will come back outside the audio
-path.
+Host to FM-1 (any MIDI input; all values reset to 0 when brick mode is
+switched on or off, so the host sends its state after CC 116):
+
+| Message | Meaning |
+| --- | --- |
+| CC 117 | mute: >= 64, the FM-1's own sound leaves its local outputs; only USB playback is heard |
+| CC 118 | dry: >= 64, USB recording carries the FM-1's sound alone, before the master volume and without the USB playback (no feedback loop when the host processes it and plays it back) |
+| CC 119 | bright button LED: 0 none, 1-14 = button 0-13 (same order as CC 102-115) |
+| CC 120 | dim button LEDs, buttons 0-6: bit n = button n |
+| CC 121 | dim button LEDs, buttons 7-13: bit n = button 7 + n |
+
+In brick mode the host owns the 14 button LEDs. The LEDs only switch on and
+off, so dim is a software PWM: on 1 ms in 8.
+
+A first version of the audio switches changed every sample of the audio
+interrupt; this one decides once per block, and with both switches off the
+mix is FM1 Open's own.
 
 ## Code
 
 - `app/screen.c`: `brick_input()` reads the panel before the pages do.
-- Nothing else changes: the audio path is the same as in FM1 Open.
+- `app/audio_output.c`: `fm1_brick_cc`, and mute / dry once per block in `fm1_output_mix()`.
+- `app/midi_router.c`: stores CC 117-121 on channel 16 from any MIDI input.
 
 License as FM1 Open: GPL-3.0-only with the FM1 SDK linking exception.
