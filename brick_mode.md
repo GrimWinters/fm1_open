@@ -40,6 +40,9 @@ switched on or off, so the host sends its state after CC 116):
 | CC 120 | dim button LEDs, buttons 0-6: bit n = button n |
 | CC 121 | dim button LEDs, buttons 7-13: bit n = button 7 + n |
 | CC 122 | keys play locally: >= 64, the note keys play the FM-1's own sound as well; below, they only go out as MIDI |
+| CC 85 | scale, pitch classes C-F#: bit n = the note n semitones above C belongs to the scale |
+| CC 86 | scale, pitch classes G-B: bit n = the note 7 + n semitones above C |
+| CC 87 | scale root: 0 = off (the keys light as usual), 1-12 = C-B |
 
 In brick mode the note keys always go out over USB, whatever KEY OUT, OUT
 PORT and LOCAL say; CC 122 takes LOCAL's place. Leaving brick mode restores
@@ -47,6 +50,10 @@ the MIDI page settings.
 
 In brick mode the host owns the 14 button LEDs. The LEDs only switch on and
 off, so dim is a software PWM: on 1 ms in 8.
+
+With a scale set (CC 87 not 0), the note keys light it: the root bright,
+the scale's other notes dim, a pressed key bright. Each key's note comes
+from the FM-1's own octave and track, so the lights follow its keyboard.
 
 A first version of the audio switches changed every sample of the audio
 interrupt; this one decides once per block, and with both switches off the
@@ -56,6 +63,6 @@ mix is FM1 Open's own.
 
 - `app/screen.c`: `brick_input()` reads the panel before the pages do.
 - `app/audio_output.c`: `fm1_brick_cc`, and mute / dry once per block in `fm1_output_mix()`.
-- `app/midi_router.c`: stores CC 117-122 on channel 16 from any MIDI input; in brick mode the keys follow CC 122.
+- `app/midi_router.c`: stores CC 117-122 and 85-87 on channel 16 from any MIDI input; in brick mode the keys follow CC 122.
 
 License as FM1 Open: GPL-3.0-only with the FM1 SDK linking exception.

@@ -1222,6 +1222,7 @@ static void leds(const struct groove_view *v, unsigned visible)
         bits &= ~((1U << edit_keys[8]) | (1U << edit_keys[9]));
         bits |= 1U << edit_keys[v->mono ? 8 : 9];
     }
+    if (brick_mode && fm1_brick_cc[8]) bits = led_cache;   /* the host's scale lights the keys */
     uint32_t changed = bits ^ led_cache;
     for (unsigned key = 0; key < 27; ++key)
         if (changed & (1U << key))
@@ -2584,7 +2585,7 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
         brick_mode ^= 1U;
         /* Both ways: audio switches and host LEDs start over, all button
          * LEDs off; the pages repaint theirs, the host resends its own. */
-        for (unsigned k = 0; k < 14; ++k) { fm1_led_set(k, 0); if (k < 6) fm1_brick_cc[k] = 0; }
+        for (unsigned k = 0; k < 14; ++k) { fm1_led_set(k, 0); if (k < 9) fm1_brick_cc[k] = 0; }
         fm1_brick_on = brick_mode;
         brick_led_cache = button_led_cache = 0;
         brick_send(116, brick_mode ? 127 : 0);
@@ -2614,6 +2615,17 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
     for (unsigned k = 0, x = on ^ brick_led_cache; x; ++k, x >>= 1)
         if (x & 1U) fm1_led_set(k, on >> k & 1U);
     brick_led_cache = (uint16_t)on;
+    /* Keys: the scale's root bright, its other notes dim, pressed keys bright. */
+    if (!fm1_brick_cc[8]) return;
+    unsigned scale = fm1_brick_cc[6] | fm1_brick_cc[7] << 7, root = fm1_brick_cc[8] - 1U;
+    uint32_t keys = c->keys;
+    for (unsigned k = 0; k < 27; ++k) {
+        unsigned pc = groove_key_note(track, k, octave) % 12U;
+        if (pc == root || (now == brick_pwm && (scale >> pc & 1U))) keys |= 1U << k;
+    }
+    for (unsigned k = 0, x = keys ^ led_cache; x; ++k, x >>= 1)
+        if (x & 1U) fm1_led_set(k + 14, keys >> k & 1U);
+    led_cache = keys;
 }
 
 void groove_screen_control(void)
