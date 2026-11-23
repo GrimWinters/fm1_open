@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
     [switch]$Package,
+    [switch]$Brickwave,   # the Brickwave Edition: a controller and sound card only (app/brickwave.c)
     [switch]$FirmwareOnly,
     [string]$Toolchain = $env:FM1_PI32_TOOLCHAIN,
     [string]$SourceUrl = $env:FM1_SOURCE_URL
@@ -292,7 +293,7 @@ $releaseVersion = $versionMatch.Groups[1].Value
 $productMatch = [regex]::Match([IO.File]::ReadAllText((Join-Path $root 'app/version.h')), '(?m)^#define FM1_UPDATE_PRODUCT "(FM-1_8[0-9]{6})"\s*$')
 if (!$productMatch.Success) { throw 'Set a compatible FM1_UPDATE_PRODUCT in app/version.h.' }
 $firmwareProduct = $productMatch.Groups[1].Value
-Write-Host "Build FM1 Official Open $releaseVersion"
+Write-Host ("Build FM1 Official Open $releaseVersion" + $(if ($Brickwave) { ' - Brickwave Edition' } else { '' }))
 if (!$Toolchain) { $Toolchain = Join-Path $sdk 'tools' }
 $Toolchain = [IO.Path]::GetFullPath($Toolchain)
 if (Test-Path -LiteralPath (Join-Path $Toolchain 'clang.exe')) { $Toolchain = Split-Path -Parent $Toolchain }
@@ -360,6 +361,7 @@ $flags = @('-target','pi32v2','-integrated-as','-mcpu=r3','-mfprev1','-Wuninitia
     '-femulated-tls','-Wno-shift-negative-value','-Wframe-larger-than=2560','-fms-extensions',
     '-fno-unwind-tables','-ffunction-sections','-fdata-sections','-fmessage-length=0',
     '-cl-single-precision-constant','-mllvm','-pi32v2-large-program=true','-D__GCC_PI32V2__','-O2')
+if ($Brickwave) { $flags += '-DFM1_BRICKWAVE' }
 foreach ($dir in $include) { $flags += '-I' + (Join-Path $root $dir) }
 $objects = @()
 $commands = @()

@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
+/* Left out of the Brickwave Edition (app/brickwave.c). */
+#ifndef FM1_BRICKWAVE
 #include "instrument.h"
 #include "audio_output.h"
 #include "fm_patch.h"
@@ -2585,7 +2587,7 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
         brick_mode ^= 1U;
         /* Both ways: audio switches and host LEDs start over, all button
          * LEDs off; the pages repaint theirs, the host resends its own. */
-        for (unsigned k = 0; k < 14; ++k) { fm1_led_set(k, 0); if (k < 9) fm1_brick_cc[k] = 0; }
+        for (unsigned k = 0; k < 14; ++k) { fm1_led_set(k, 0); if (k < 10) fm1_brick_cc[k] = 0; }
         fm1_brick_on = brick_mode;
         brick_led_cache = button_led_cache = 0;
         brick_send(116, brick_mode ? 127 : 0);
@@ -2595,6 +2597,7 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
         return;
     }
     if (!brick_mode) return;
+    if (fm1_brick_cc[9]) { fm1_brick_cc[9] = 0; brick_send(116, 127); }   /* host hello */
     for (unsigned i = 0; i < 7; ++i) {
         int s = c->encoders[i];
         if (!s) continue;
@@ -3040,3 +3043,4 @@ static void algorithm_draw(unsigned algorithm, unsigned muted)
         number(x + 8, y + 3, i + 1, 1, 1, muted & (1U << i) ? DIM : BACK, bg);
     }
 }
+#endif

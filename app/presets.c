@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
+/* Left out of the Brickwave Edition (app/brickwave.c). */
+#ifndef FM1_BRICKWAVE
 #include "instrument.h"
 #include "fm_patch.h"
 #include "drum808.h"
@@ -283,3 +285,4 @@ int groove_factory_build(unsigned index, struct groove_project *p)
     }
     return groove_project_valid(p) ? 0 : GROOVE_PROJECT_INVALID;
 }
+#endif

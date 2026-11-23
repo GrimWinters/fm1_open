@@ -4,15 +4,20 @@ setlocal
 if "%~1"=="" goto build
 if /i "%~1"=="--help" goto help
 if /i "%~1"=="--web" goto web
+if /i "%~1"=="--brickwave" goto brickwave
 if /i not "%~1"=="--package" goto invalid
 if not "%~2"=="" goto invalid
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0sdk\Build.ps1" -Package
+exit /b %errorlevel%
+:brickwave
+if not "%~2"=="" goto invalid
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0sdk\Build.ps1" -Package -Brickwave
 exit /b %errorlevel%
 :build
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0sdk\Build.ps1"
 exit /b %errorlevel%
 :invalid
-echo Use build.bat --web, build.bat or build.bat --package.
+echo Use build.bat --web, build.bat, build.bat --package or build.bat --brickwave.
 exit /b 2
 :web
 if not "%~2"=="" goto invalid
@@ -22,5 +27,6 @@ exit /b %errorlevel%
 echo build.bat             Build firmware
 echo build.bat --web       Build browser preview
 echo build.bat --package   Build firmware and complete workbench
+echo build.bat --brickwave Build the Brickwave Edition (controller and sound card) and its workbench
 echo Toolchain and output paths: README.md
 exit /b 0

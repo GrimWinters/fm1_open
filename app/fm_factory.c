@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
+/* Left out of the Brickwave Edition (app/brickwave.c). */
+#ifndef FM1_BRICKWAVE
 #include "fm_patch.h"
 #include "fm_factory.inc"
 
@@ -30,3 +32,4 @@ FM1_DSP_CODE void groove_fm_factory(uint8_t p[156], unsigned program)
 {
     groove_fm_unpack(p,groove_fm_factory_raw(program));
 }
+#endif

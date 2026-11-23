@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
+/* Left out of the Brickwave Edition (app/brickwave.c). */
+#ifndef FM1_BRICKWAVE
 #include "instrument.h"
 #include "tuning_hook.h"
 #include "fm_patch.h"
@@ -354,3 +356,4 @@ discard:
     barrier();
     incoming.length = 0;
 }
+#endif

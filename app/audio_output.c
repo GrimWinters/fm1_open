@@ -7,7 +7,7 @@ static unsigned output_gain;
 static int32_t usb_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
 static int16_t bluetooth_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
 static int32_t dry_pcm[FM1_BLOCK_WORDS] __attribute__((aligned(32)));
-volatile uint8_t fm1_brick_cc[9];
+volatile uint8_t fm1_brick_cc[10];
 unsigned fm1_brick_on;
 
 void fm1_output_reset(void) { output_gain = 0; }
@@ -48,7 +48,8 @@ FM1_AUDIO_CODE void fm1_output_mix(int32_t *output)
             value += ((int64_t)usb_pcm[i] * ((i & 1U) ? right : left)) >> 7;
         output[i] = usb_frames == -2 ? 0 : limit(value);
     }
-    if (fm1_bluetooth_audio_read(bluetooth_pcm, FM1_BLOCK_FRAMES) == FM1_BLOCK_FRAMES) {
+    const int bt_frames = fm1_bluetooth_audio_read(bluetooth_pcm, FM1_BLOCK_FRAMES);
+    if (bt_frames == FM1_BLOCK_FRAMES) {
         /* output is already clipped to 24 bits. Adding signed 16-bit PCM
          * times at most 254 fits in 25 bits, so this stage needs no int64. */
         for (unsigned i = 0; i < FM1_BLOCK_WORDS; ++i) {
@@ -56,5 +57,15 @@ FM1_AUDIO_CODE void fm1_output_mix(int32_t *output)
             output[i] = value > 8388607 ? 8388607 : value < -8388608 ? -8388608 : value;
         }
     }
+#ifdef FM1_BRICKWAVE
+    /* Brickwave Edition: the host's input is Bluetooth audio alone (a phone),
+     * never its own playback, so effect mode has a source and no loop. */
+    if (bt_frames == FM1_BLOCK_FRAMES)
+        for (unsigned i = 0; i < FM1_BLOCK_WORDS; ++i) dry_pcm[i] = (int32_t)bluetooth_pcm[i] * 256;
+    else
+        for (unsigned i = 0; i < FM1_BLOCK_WORDS; ++i) dry_pcm[i] = 0;
+    (void)fm1_usb_audio_write(dry_pcm, FM1_BLOCK_FRAMES);
+#else
     (void)fm1_usb_audio_write(dry ? dry_pcm : output, FM1_BLOCK_FRAMES);
+#endif
 }

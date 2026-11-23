@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
+/* Left out of the Brickwave Edition (app/brickwave.c). */
+#ifndef FM1_BRICKWAVE
 /* Modified 2026-10-17: bind tuning to project contents, not device settings;
  * preserve valid version-1 entries before rewriting their project records;
  * defer edit checkpoints until allocation succeeds; reject tuned saves that
@@ -858,3 +860,4 @@ void groove_project_poll(void)
             settings_changed = fm1_millis();
     }
 }
+#endif

@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only WITH GPL-3.0-linking-exception */
+/* Left out of the Brickwave Edition (app/brickwave.c). */
+#ifndef FM1_BRICKWAVE
 #include "instrument.h"
 #include "fm_patch.h"
 #include "fm1_device.h"
@@ -185,3 +187,4 @@ int groove_fm_library_write(unsigned index, const uint8_t raw[4096])
     if (!r) r=groove_fm_library_recover();
     fm1_engine_resume(); return r;
 }
+#endif

@@ -43,6 +43,7 @@ switched on or off, so the host sends its state after CC 116):
 | CC 85 | scale, pitch classes C-F#: bit n = the note n semitones above C belongs to the scale |
 | CC 86 | scale, pitch classes G-B: bit n = the note 7 + n semitones above C |
 | CC 87 | scale root: 0 = off (the keys light as usual), 1-12 = C-B |
+| CC 116 | hello: an FM-1 in brick mode answers with CC 116 = 127 (so the host finds it whichever started first) |
 
 In brick mode the note keys always go out over USB, whatever KEY OUT, OUT
 PORT and LOCAL say; CC 122 takes LOCAL's place. Leaving brick mode restores
@@ -59,9 +60,23 @@ A first version of the audio switches changed every sample of the audio
 interrupt; this one decides once per block, and with both switches off the
 mix is FM1 Open's own.
 
+## Brickwave Edition
+
+`build.bat --brickwave` builds a firmware that is only a controller and sound
+card for Brickwave (`app/brickwave.c`). It starts in brick mode and stays
+there; the screen shows whether a host is connected. The FM-1's own
+instrument is linked (the SDK needs it) but always silent; its pages,
+projects, presets, samples, DX7 library and workbench transfers are left out
+(`#ifndef FM1_BRICKWAVE` around those files). The master knob still sets
+the volume. Keys send notes on channel 1 (F3-G5, velocity 100). Bluetooth
+audio from a phone is played and is also the only thing in the USB
+recording, so Brickwave's effect mode has an input and no feedback loop.
+To go back, flash a normal build (or the original V15) the same way.
+
 ## Code
 
 - `app/screen.c`: `brick_input()` reads the panel before the pages do.
+- `app/brickwave.c`: the Brickwave Edition's whole panel and screen.
 - `app/audio_output.c`: `fm1_brick_cc`, and mute / dry once per block in `fm1_output_mix()`.
 - `app/midi_router.c`: stores CC 117-122 and 85-87 on channel 16 from any MIDI input; in brick mode the keys follow CC 122.
 
