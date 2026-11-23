@@ -356,4 +356,15 @@ discard:
     barrier();
     incoming.length = 0;
 }
+#else
+/* Brickwave Edition: no project transfers; firmware updates are the SDK's
+ * own and keep working. The build checks that this callback is a real
+ * function, not the SDK's weak default, and this file is compiled without
+ * LTO so that it stays one. */
+#include "fm1.h"
+static volatile unsigned sysex_ignored;
+void fm1_app_sysex(const uint8_t *m, size_t n)
+{
+    if (m && n) sysex_ignored = sysex_ignored + 1U;
+}
 #endif

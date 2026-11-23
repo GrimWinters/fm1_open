@@ -31,14 +31,8 @@ FM1_DSP_CODE void groove_fm_program(uint8_t patch[156], unsigned program)
     (void)program;
     for (unsigned i = 0; i < 156; ++i) patch[i] = 0;
 }
-/* The workbench's project transfers (app/transfer.c) are left out; firmware
- * updates are the SDK's own and keep working. The build checks that this
- * callback is a real function, not the SDK's weak default: it counts. */
-static volatile unsigned sysex_ignored;
-__attribute__((used, noinline)) void fm1_app_sysex(const uint8_t *message, size_t bytes)
-{
-    if (message && bytes) sysex_ignored = sysex_ignored + 1U;
-}
+/* fm1_app_sysex: in app/transfer.c, which the build compiles without LTO
+ * (LTO drops application callbacks that the SDK has weak defaults for). */
 /* sdk/Build.ps1 checks that these runtime parts are in every firmware. The
  * left-out pages were their only users; keep them linked. */
 __attribute__((used)) static const void *const keep_runtime[] = {
