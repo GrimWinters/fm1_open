@@ -890,7 +890,7 @@ static __attribute__((noinline)) void tone_draw(const uint8_t values[GROOVE_TONE
              : type == GROOVE_303
                  ? (view.mono ? "MONO SLIDE  MONO/POLY KEYS" : "POLY 4      MONO/POLY KEYS")
              : type == GROOVE_SAMPLE ? "8 WHITE KEYS PLAY / SELECT"
-                                     : page == FM_ENV ? "PRESETS DRUM  KEYS PLAY" : "PRESETS DRUM / KIT  KEYS PLAY",
+                                     : page == FM_ENV ? "PRESETS DRUM  KEYS PLAY" : "PRESETS DRUM/KIT  KEYS PLAY",
              1, DIM, BACK);
         memset(cache->tile_cache, 0xff, sizeof cache->tile_cache);
     }
@@ -1035,13 +1035,13 @@ static __attribute__((noinline)) void draw_ble(const struct fm1_ble_status *stat
         radio_line(1, 200, actions[ble_action], ACCENT);
     }
     const char *error = ble_forget == 1 ? "FORGET PAIRS? SAVE YES/HOME NO"
-        : ble_forget == 2 && !status->pending && !status->error ? "PAIR AGAIN; FORGET FM1 ON PEER"
+        : ble_forget == 2 && !status->pending && !status->error ? "PAIR AGAIN; FORGET ON PEER"
         : groove_settings_status() ? "NOT SAVED - RETRY"
         : ble_result == -2 ? "BUSY - RETRY" : ble_result == -3 ? "RADIO AVAILABLE ON DEVICE"
         : ble_result ? "COMMAND UNAVAILABLE"
         : status->error <= FM1_BLE_LINK_LOST ? errors[status->error] : "";
     radio_line(3, 213, error, AMBER);
-    radio_line(4, 229, "PRESETS ACTION  SAVE OK  HOME EXIT", DIM);
+    radio_line(4, 229, "PRESETS ACTION SAVE OK HOME EXIT", DIM);
 }
 static __attribute__((noinline)) void project_draw(void)
 {
@@ -1076,7 +1076,7 @@ static __attribute__((noinline)) void project_draw(void)
     if (cache->hint_cache != 1U) {
         cache->hint_cache = 1U;
         text(8, 59, "WORKING NAME", 1, DIM, BACK);
-        text(8, 105, "SELECT / PRESETS CHOOSE SLOT", 1, DIM, BACK);
+        text(8, 105, "SEL / PRESETS CHOOSE SLOT", 1, DIM, BACK);
         text(8, 224, "HOME CANCEL  EDIT SOUND", 1, DIM, BACK);
     }
     sig = (unsigned)(project_result + 16) | (project_operation << 16);
@@ -1280,7 +1280,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         text(8, 148, "NEW SOURCE RESETS TIMBRE", 1, DIM, BACK);
         text(8, 165, "DRUM/PITCH CLEARS STEPS", 1, AMBER, BACK);
         text(8, 196, source_result ? "NOT ENOUGH MEMORY - RETRY" : "UNDO IN HOLD SEQ MENU", 1, source_result ? AMBER : DIM, BACK);
-        text(8, 231, "ALGO / K2 CHOOSE  SAVE APPLY", 1, DIM, BACK);
+        text(8, 231, "ALGO/K2 CHOOSE  SAVE APPLY", 1, DIM, BACK);
     } else if (visible == ACTIONS) {
         if (action_confirm) text(8, 38, "REPLACE PATTERN DATA?", 1, AMBER, BACK);
         else {
@@ -1298,7 +1298,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
             text(10, y + 5, actions[at], 1, at == action ? ACCENT : DIM, bg);
         }
         text(8, 213, notice ? notice : "SELECT ACTION  SAVE DO", 1, TEXT, BACK);
-        text(8, 231, action_confirm ? "SAVE CONFIRM   HOME CANCEL" : "PRESETS STEP  OCT PAGE  SAVE DO", 1, DIM, BACK);
+        text(8, 231, action_confirm ? "SAVE CONFIRM   HOME CANCEL" : "PRESETS STEP OCT PAGE SAVE DO", 1, DIM, BACK);
     } else if (visible == ARP_EDIT) {
         text(8, 40, "ARPEGGIATOR", 2, ACCENT, BACK);
         text(184, 40, "T", 2, colors[track], BACK);
@@ -1306,7 +1306,7 @@ static __attribute__((noinline)) void edit_page_draw(unsigned visible)
         text(8, 72, !groove_arp_enabled(track) ? "OFF - TAP ARP TO ENABLE" : groove_arp_setting(track, 5) ? "ON - HOLD LATCHES CHORD" : "ON - HOLD KEYS TO PLAY", 1, TEXT, BACK);
         text(8, 96, "SELECT TRACK  K1-K4 ADJUST", 1, DIM, BACK);
         text(8, 118, "RATE FOLLOWS BPM/CLOCK", 1, DIM, BACK);
-        text(8, 140, arp_page ? "RELEASE KEYS FOR NEW CHORD" : groove_pad_count(track) ? "DRUMS: NO RANGE / GATE" : "UP / DOWN / UP-DOWN / RANDOM", 1, DIM, BACK);
+        text(8, 140, arp_page ? "RELEASE FOR NEW CHORD" : groove_pad_count(track) ? "DRUMS: NO RANGE / GATE" : "UP/DOWN/UP-DOWN/RANDOM", 1, DIM, BACK);
         text(8, 162, "SAVED WITH PROJECT", 1, DIM, BACK);
         text(8, 180, arp_page ? "2/2 SWING / HOLD  ALGO PAGE" : "1/2 NOTES  ALGO PAGE", 1, ACCENT, BACK);
         static const char *const rates[] = {"1/4", "1/8", "1/16", "1/32"};
@@ -1560,15 +1560,15 @@ static void draw_page_body(const struct fm1_ble_status *ble)
     const char *hint = notice ? notice : source_result ? "SOURCE MEMORY FULL - RETRY"
                        : v->clock_mode && v->clock_state != GROOVE_CLOCK_LOCKED
                            ? "WAIT MIDI CLOCK"
-                       : writing && groove_sequence_count_in() ? "COUNT IN - REC ON NEXT BAR"
+                       : writing && groove_sequence_count_in() ? "COUNT IN: REC NEXT BAR"
                        : writing ? v->playing ? "LIVE REC - REC TO FINISH"
                                                              : "STEP REC - REC TO FINISH"
                        : visible == OVERVIEW && (previous_buttons & BUTTON(HOME))
-                           ? "PRESETS SOURCE  EDIT PARAMETERS"
+                           ? "PRESETS SOURCE  EDIT PARAMS"
                        : visible == OVERVIEW ? "PRESETS PRESET  ALGO ENGINE"
-                       : visible == STEPS    ? "PRESETS STEP  OCT PAGE  HOLD SEQ MORE"
-                       : visible == MIX      ? "KEYS MUTE/SOLO  GLO / HOME BACK"
-                       : visible == FM_EDIT  ? "BLACK OP  SELECT PAGE  EDIT BACK"
+                       : visible == STEPS    ? "PRESETS STEP  OCT PAGE  SEQ MORE"
+                       : visible == MIX      ? "KEYS MUTE/SOLO  HOME BACK"
+                       : visible == FM_EDIT  ? "BLACK OP  SEL PAGE  EDIT BACK"
                        : visible == FM_ENV && v->type != GROOVE_DX7 ? "ENV BACK  SELECT TRACK"
                        : visible == FM_ENV   ? "PRESETS ENV ON/OFF  HOME TRACKS"
                        : visible == TONE_EDIT && !advanced_edit
