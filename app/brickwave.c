@@ -31,6 +31,21 @@ FM1_DSP_CODE void groove_fm_program(uint8_t patch[156], unsigned program)
     (void)program;
     for (unsigned i = 0; i < 156; ++i) patch[i] = 0;
 }
+/* The workbench's project transfers (app/transfer.c) are left out; firmware
+ * updates are the SDK's own and keep working. */
+void fm1_app_sysex(const uint8_t *message, size_t bytes)
+{
+    (void)message;
+    (void)bytes;
+}
+/* sdk/Build.ps1 checks that these runtime parts are in every firmware. The
+ * left-out pages were their only users; keep them linked. */
+__attribute__((used)) static const void *const keep_runtime[] = {
+    (const void *)fm1_ble_set_role, (const void *)fm1_ble_scan, (const void *)fm1_ble_connect,
+    (const void *)fm1_ble_disconnect, (const void *)fm1_ble_get_status, (const void *)fm1_ble_get_device,
+    (const void *)fm1_bluetooth_configure, (const void *)fm1_bluetooth_get_status,
+    (const void *)groove_tuning_capture, (const void *)groove_tuning_apply,
+    (const void *)groove_project_apply_edit};
 
 /* ---- Screen: a few lines of large text ------------------------------- */
 enum { BACK = 0x0000, TEXT = 0xef5d, DIM = 0x738e, ACCENT = 0x07ff, AMBER = 0xfd20 };
@@ -92,6 +107,9 @@ static void show(unsigned state)
 
 void groove_screen_init(void)
 {
+    /* Read the table once, so the linker cannot drop it (and what it lists). */
+    for (unsigned i = 0; i < sizeof keep_runtime / sizeof keep_runtime[0]; ++i)
+        (void)*(const void *const volatile *)&keep_runtime[i];
     fm1_controls_init();
     for (unsigned k = 0; k < 41; ++k) fm1_led_set(k, 0);
     fm1_screen_init();
