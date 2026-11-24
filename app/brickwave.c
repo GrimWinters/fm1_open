@@ -56,17 +56,17 @@ static const uint8_t font[36][5] = {
 static uint16_t glyph[6 * 4 * 7 * 4];   /* one character at scale 4 */
 
 /* One line of text, left-aligned at x (centred if x is ~0U), cleared to the
- * right edge. Characters other than digits, letters and '-' are spaces. */
+ * right edge. Characters other than digits, letters, '-' and '.' are spaces. */
 static void line(unsigned x, unsigned y, const char *s, unsigned scale, uint16_t color)
 {
     const unsigned w = 6U * scale, h = 7U * scale, n = (unsigned)strlen(s);
     if (x == ~0U) x = n * w < FM1_SCREEN_WIDTH ? (FM1_SCREEN_WIDTH - n * w) / 2U : 0;
     fm1_screen_fill(0, y, FM1_SCREEN_WIDTH, h, BACK);
     for (; *s && x + w <= FM1_SCREEN_WIDTH; ++s, x += w) {
-        static const uint8_t dash[5] = {8, 8, 8, 8, 8}, blank[5] = {0};
+        static const uint8_t dash[5] = {8, 8, 8, 8, 8}, dot[5] = {0, 0x60, 0x60, 0, 0}, blank[5] = {0};
         const char c = *s >= 'a' && *s <= 'z' ? (char)(*s - 32) : *s;
         const uint8_t *shape = c >= '0' && c <= '9' ? font[c - '0']
-                             : c >= 'A' && c <= 'Z' ? font[10 + c - 'A'] : c == '-' ? dash : blank;
+                             : c >= 'A' && c <= 'Z' ? font[10 + c - 'A'] : c == '-' ? dash : c == '.' ? dot : blank;
         for (unsigned r = 0; r < h; ++r)
             for (unsigned col = 0; col < w; ++col)
                 glyph[r * w + col] = col / scale < 5U && (shape[col / scale] >> (r / scale) & 1U) ? color : BACK;
@@ -76,7 +76,8 @@ static void line(unsigned x, unsigned y, const char *s, unsigned scale, uint16_t
 
 /* ---- Brick mode ------------------------------------------------------- */
 enum { KEYS = 27, BASE_NOTE = 53 };   /* the keys are F3..G5 */
-static uint32_t last_keys, last_buttons, key_leds, pwm_at, hello_at;
+static uint32_t last_keys, last_buttons, key_leds, hello_at, pass_at, pass_x16, shown_at;
+static unsigned pass_count;
 static uint16_t button_leds;
 static unsigned host_seen, shown;
 
@@ -110,7 +111,9 @@ void groove_screen_init(void)
     last_keys = last_buttons = key_leds = 0;
     button_leds = 0;
     host_seen = shown = 0;
-    pwm_at = hello_at = fm1_millis();
+    hello_at = pass_at = shown_at = fm1_millis();
+    pass_x16 = 16U;
+    pass_count = 0;
     (void)fm1_bluetooth_configure(FM1_BT_AUDIO);   /* a phone can stream in */
     show(1);
 }
@@ -147,11 +150,25 @@ void groove_screen_control(void)
         if (x & 1U) send((c.keys >> k & 1U) ? 0x90 : 0x80, (uint8_t)(BASE_NOTE + k), (c.keys >> k & 1U) ? 100 : 0);
     last_keys = c.keys;
 
-    /* LEDs. Dim ones are a software PWM: on 1 ms in 8. Buttons: one bright,
+    /* How long one pass takes (smoothed, ms x 16), shown on the screen. */
+    pass_x16 += (now - pass_at) - pass_x16 / 16U;
+    pass_at = now;
+    if (now - shown_at >= 1000U) {
+        shown_at = now;
+        char t[16] = "LOOP 00.0 MS";
+        const unsigned tenths = (pass_x16 * 10U + 8U) / 16U;
+        t[5] = (char)('0' + tenths / 100U % 10U);
+        t[6] = (char)('0' + tenths / 10U % 10U);
+        t[8] = (char)('0' + tenths % 10U);
+        if (t[5] == '0') t[5] = ' ';
+        line(~0U, 214, t, 1, DIM);
+    }
+
+    /* LEDs. Dim ones are a software PWM: on during one pass in eight, so the
+     * brightness is the same however long a pass takes. Buttons: one bright,
      * a mask dim (CC 119-121). Keys: the host's scale (CC 85-87), the root
      * bright, the others dim; a pressed key bright. */
-    if (now - pwm_at >= 8U) pwm_at = now;
-    const unsigned slot = now == pwm_at;
+    const unsigned slot = (++pass_count & 7U) == 0;
     unsigned on = fm1_brick_cc[2] ? 1U << (fm1_brick_cc[2] - 1U) : 0;
     if (slot) on |= fm1_brick_cc[3] | fm1_brick_cc[4] << 7;
     on &= 0x3fffU;
