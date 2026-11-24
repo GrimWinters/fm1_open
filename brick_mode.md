@@ -53,7 +53,7 @@ In brick mode the host owns the 14 button LEDs. The LEDs only switch on and
 off, so dim is a software PWM: on 1 ms in 8.
 
 With a scale set (CC 87 not 0), the note keys light it: the root bright,
-the scale's other notes dim, a pressed key bright. Each key's note comes
+the scale's other notes dim, a pressed key bright (the Brickwave Edition: the scale lit, its root blinking, a pressed key flipped; its panel loop is too slow to dim). Each key's note comes
 from the FM-1's own octave and track, so the lights follow its keyboard.
 
 A first version of the audio switches changed every sample of the audio

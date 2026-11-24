@@ -77,7 +77,7 @@ static void line(unsigned x, unsigned y, const char *s, unsigned scale, uint16_t
 /* ---- Brick mode ------------------------------------------------------- */
 enum { KEYS = 27, BASE_NOTE = 53 };   /* the keys are F3..G5 */
 static uint32_t last_keys, last_buttons, key_leds, hello_at, host_at, pass_at, pass_x16, shown_at;
-static unsigned pass_count;
+static unsigned pass_count;   /* passes since start (for diagnostics) */
 static uint16_t button_leds;
 static unsigned host_seen, shown;
 
@@ -170,25 +170,26 @@ void groove_screen_control(void)
         line(~0U, 214, t, 1, DIM);
     }
 
-    /* LEDs. Dim ones are a software PWM: on during one pass in eight, so the
-     * brightness is the same however long a pass takes. Buttons: one bright,
-     * a mask dim (CC 119-121). Keys: the host's scale (CC 85-87), the root
-     * bright, the others dim; a pressed key bright. */
-    const unsigned slot = (++pass_count & 7U) == 0;
+    /* LEDs, only on or off: a pass takes ~19 ms, too slow to dim them without
+     * visible flicker. Buttons: the bright one (CC 119) lights; the dim mask
+     * (CC 120-121) is not shown. Keys: the host's scale (CC 85-87) lights,
+     * its root blinks once a second, a pressed key flips its light. */
+    ++pass_count;
     unsigned on = fm1_brick_cc[2] ? 1U << (fm1_brick_cc[2] - 1U) : 0;
-    if (slot) on |= fm1_brick_cc[3] | fm1_brick_cc[4] << 7;
     on &= 0x3fffU;
     for (unsigned k = 0, x = on ^ button_leds; x; ++k, x >>= 1)
         if (x & 1U) fm1_led_set(k, on >> k & 1U);
     button_leds = (uint16_t)on;
-    uint32_t keys = c.keys;
+    uint32_t keys = 0;
     if (fm1_brick_cc[8]) {
         const unsigned scale = fm1_brick_cc[6] | fm1_brick_cc[7] << 7, root = fm1_brick_cc[8] - 1U;
+        const unsigned blink = now % 1000U < 650U;
         for (unsigned k = 0; k < KEYS; ++k) {
             const unsigned pc = (BASE_NOTE + k) % 12U;
-            if (pc == root || (slot && (scale >> pc & 1U))) keys |= 1U << k;
+            if (pc == root ? blink : (scale >> pc & 1U)) keys |= 1U << k;
         }
     }
+    keys ^= c.keys;
     for (unsigned k = 0, x = keys ^ key_leds; x; ++k, x >>= 1)
         if (x & 1U) fm1_led_set(k + 14, keys >> k & 1U);
     key_leds = keys;
