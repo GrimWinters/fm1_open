@@ -325,8 +325,18 @@ void fm1_app_midi_received(unsigned source, const uint8_t *m, size_t n)
 {
     if (source >= 3 || !m || !n || n > 3) return;
     /* Brick mode host messages: CC 117-122 and 85-87 on channel 16 (brick_mode.md). */
-    if (n == 3 && m[0] == 0xbf && m[1] >= 117 && m[1] <= 122) { fm1_brick_cc[m[1] - 117] = m[2]; return; }
-    if (n == 3 && m[0] == 0xbf && m[1] >= 85 && m[1] <= 87) { fm1_brick_cc[m[1] - 79] = m[2]; return; }
+    /* Any of them also tells the Brickwave Edition the host is there (65 = alive,
+     * unless a hello or goodbye is waiting). */
+    if (n == 3 && m[0] == 0xbf && m[1] >= 117 && m[1] <= 122) {
+        fm1_brick_cc[m[1] - 117] = m[2];
+        if (!fm1_brick_cc[9]) fm1_brick_cc[9] = 65;
+        return;
+    }
+    if (n == 3 && m[0] == 0xbf && m[1] >= 85 && m[1] <= 87) {
+        fm1_brick_cc[m[1] - 79] = m[2];
+        if (!fm1_brick_cc[9]) fm1_brick_cc[9] = 65;
+        return;
+    }
     /* Host CC 116: 127 hello (answer it), 64 still here, 0 goodbye; stored + 1. */
     if (n == 3 && m[0] == 0xbf && m[1] == 116) { fm1_brick_cc[9] = (uint8_t)(m[2] + 1U); return; }
     unsigned clock = m[0] == 0xf8 || m[0] == 0xfa || m[0] == 0xfb || m[0] == 0xfc || m[0] == 0xf2;
