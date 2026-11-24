@@ -105,11 +105,11 @@ static void line(unsigned x, unsigned y, const char *s, unsigned scale, uint16_t
 
 /* ---- The second screen: what Brickwave's knobs K1-K4 turn ------------------
  * Brickwave sends F0 7D 'B' 'W' 01, the page name, 0, a status line, 0, then
- * per knob: flags (1 used, 2 inactive, 4 bipolar, 8 selected), bar 0-127,
+ * per knob: flags (1 used, 2 inactive, 4 bipolar, 8 selected, 16 no bar), bar 0-127,
  * zero 0-127, colour RGB565 in three bytes (bits 0-6, 7-13, 14-15), name, 0,
  * value, 0; then F7. Text is ASCII. */
 unsigned brickwave_sysex_take(uint8_t *out, unsigned max);   /* app/transfer.c */
-struct knob { uint8_t flags, bar, zero; uint16_t color; char name[11], value[11]; };
+struct knob { uint8_t flags, bar, zero; uint16_t color; char name[17], value[17]; };
 static struct knob knobs[4];
 static char page_name[13], status_line[38];
 
@@ -130,12 +130,17 @@ static void draw_knob(unsigned i)
     if (!(k->flags & 1U)) { draw(10, y + 4, "-", 2, DIM, BACK); return; }
     const uint16_t c = k->flags & 2U ? DIM : k->color;
     if (k->flags & 8U) fm1_screen_fill(0, y, 3, 30, TEXT);   /* the selected parameter */
+    const unsigned nw = (unsigned)strlen(k->name) * 12U, vw = (unsigned)strlen(k->value) * 12U;
+    if (k->flags & 16U) {   /* a list line (presets): name, then the value after it */
+        draw(10, y + 6, k->name, 2, c, BACK);
+        draw(10U + nw + 12U, y + 6, k->value, 2, k->flags & 2U ? DIM : k->flags & 8U ? TEXT : DIM, BACK);
+        return;
+    }
     char label[14] = "K1 ";
     label[1] = (char)('1' + i);
     draw(10, y + 4, label, 1, DIM, BACK);
     draw(30, y, k->name, 2, c, BACK);
     /* The value on the right; if it would run into the name, smaller. */
-    const unsigned nw = (unsigned)strlen(k->name) * 12U, vw = (unsigned)strlen(k->value) * 12U;
     if (30U + nw + 8U + vw <= 232U) draw(232U - vw, y, k->value, 2, k->flags & 2U ? DIM : TEXT, BACK);
     else draw(232U - vw / 2U, y + 6, k->value, 1, k->flags & 2U ? DIM : TEXT, BACK);
     const unsigned bx = 10, by = y + 20, bw = 222, bh = 8;

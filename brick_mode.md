@@ -78,9 +78,9 @@ parameter's name, value and bar in its slot colour (the selected one marked
 on the left), and a status line (preset, key, motion count-in / REC).
 Brickwave sends it as SysEx when it changes, and every two seconds:
 `F0 7D 'B' 'W' 01`, page name, 0, status line, 0, then per knob: flags
-(1 used, 2 inactive, 4 bipolar, 8 selected), bar 0-127, zero 0-127, colour
+(1 used, 2 inactive, 4 bipolar, 8 selected, 16 a list line without bar), bar 0-127, zero 0-127, colour
 RGB565 in three 7-bit bytes (bits 0-6, 7-13, 14-15), name, 0, value, 0; `F7`.
-Text is ASCII; at most 192 bytes.
+Text is ASCII, names and values up to 16 characters; at most 192 bytes. On the preset list the four lines are the highlighted slot and the three after it.
 
 ## Code
 
