@@ -43,7 +43,7 @@ switched on or off, so the host sends its state after CC 116):
 | CC 85 | scale, pitch classes C-F#: bit n = the note n semitones above C belongs to the scale |
 | CC 86 | scale, pitch classes G-B: bit n = the note 7 + n semitones above C |
 | CC 87 | scale root: 0 = off (the keys light as usual), 1-12 = C-B |
-| CC 116 | hello: an FM-1 in brick mode answers with CC 116 = 127 (so the host finds it whichever started first) |
+| CC 116 | 127 hello: an FM-1 in brick mode answers with CC 116 = 127 (so the host finds it whichever started first); 64 every second while the host runs; 0 when it quits. The Brickwave Edition shows WAITING FOR HOST and turns the host's LEDs off after a goodbye or 3.5 s without one |
 
 In brick mode the note keys always go out over USB, whatever KEY OUT, OUT
 PORT and LOCAL say; CC 122 takes LOCAL's place. Leaving brick mode restores

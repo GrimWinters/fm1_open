@@ -327,7 +327,8 @@ void fm1_app_midi_received(unsigned source, const uint8_t *m, size_t n)
     /* Brick mode host messages: CC 117-122 and 85-87 on channel 16 (brick_mode.md). */
     if (n == 3 && m[0] == 0xbf && m[1] >= 117 && m[1] <= 122) { fm1_brick_cc[m[1] - 117] = m[2]; return; }
     if (n == 3 && m[0] == 0xbf && m[1] >= 85 && m[1] <= 87) { fm1_brick_cc[m[1] - 79] = m[2]; return; }
-    if (n == 3 && m[0] == 0xbf && m[1] == 116) { fm1_brick_cc[9] = 1; return; }   /* host hello */
+    /* Host CC 116: 127 hello (answer it), 64 still here, 0 goodbye; stored + 1. */
+    if (n == 3 && m[0] == 0xbf && m[1] == 116) { fm1_brick_cc[9] = (uint8_t)(m[2] + 1U); return; }
     unsigned clock = m[0] == 0xf8 || m[0] == 0xfa || m[0] == 0xfb || m[0] == 0xfc || m[0] == 0xf2;
     if (clock && !groove_midi_clock_accept(source, m[0])) return;
     (void)fm1_midi_post(m, n);

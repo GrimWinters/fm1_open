@@ -13,6 +13,6 @@ FM1_AUDIO_CODE void fm1_output_mix(int32_t *output);
  * [5] keys play locally (>= 64; read by the router), [6] [7] the scale's
  * pitch classes (C = bit 0), [8] its root + 1 (0 = keys light as usual).
  * fm1_brick_on: brick mode is on (set by the panel). */
-extern volatile uint8_t fm1_brick_cc[10];   /* [9]: the host said hello (CC 116) */
+extern volatile uint8_t fm1_brick_cc[10];   /* [9]: the host's CC 116 + 1 (128 hello, 65 alive, 1 bye) */
 extern unsigned fm1_brick_on;
 #endif

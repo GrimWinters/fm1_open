@@ -2597,7 +2597,7 @@ static void brick_input(struct fm1_controls *c, uint32_t now)
         return;
     }
     if (!brick_mode) return;
-    if (fm1_brick_cc[9]) { fm1_brick_cc[9] = 0; brick_send(116, 127); }   /* host hello */
+    if (fm1_brick_cc[9]) { if (fm1_brick_cc[9] == 128) brick_send(116, 127); fm1_brick_cc[9] = 0; }   /* host hello */
     for (unsigned i = 0; i < 7; ++i) {
         int s = c->encoders[i];
         if (!s) continue;

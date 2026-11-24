@@ -76,7 +76,7 @@ static void line(unsigned x, unsigned y, const char *s, unsigned scale, uint16_t
 
 /* ---- Brick mode ------------------------------------------------------- */
 enum { KEYS = 27, BASE_NOTE = 53 };   /* the keys are F3..G5 */
-static uint32_t last_keys, last_buttons, key_leds, hello_at, pass_at, pass_x16, shown_at;
+static uint32_t last_keys, last_buttons, key_leds, hello_at, host_at, pass_at, pass_x16, shown_at;
 static unsigned pass_count;
 static uint16_t button_leds;
 static unsigned host_seen, shown;
@@ -111,7 +111,7 @@ void groove_screen_init(void)
     last_keys = last_buttons = key_leds = 0;
     button_leds = 0;
     host_seen = shown = 0;
-    hello_at = pass_at = shown_at = fm1_millis();
+    hello_at = host_at = pass_at = shown_at = fm1_millis();
     pass_x16 = 16U;
     pass_count = 0;
     (void)fm1_bluetooth_configure(FM1_BT_AUDIO);   /* a phone can stream in */
@@ -125,15 +125,21 @@ void groove_screen_control(void)
     const uint32_t now = fm1_millis();
     (void)groove_master_update(c.knob);   /* the master knob: the FM-1's volume */
 
-    /* Host hello (it sends CC 116 when it starts): answer that brick mode is on.
-     * Until a host has spoken, say so every two seconds anyway. */
-    if (fm1_brick_cc[9] || (!host_seen && now - hello_at >= 2000U)) {
-        if (fm1_brick_cc[9]) host_seen = 1;
-        fm1_brick_cc[9] = 0;
+    /* The host: CC 116 127 hello (answer: brick mode is on), 64 every second
+     * while it runs, 0 when it quits. Gone (goodbye, or 3.5 s of silence):
+     * its LEDs go dark and we ask every two seconds again. */
+    const unsigned msg = fm1_brick_cc[9];
+    fm1_brick_cc[9] = 0;
+    if (msg == 128) send(0xbf, 116, 127);
+    if (msg > 1) { host_seen = 1; host_at = now; }
+    if (host_seen && (msg == 1 || now - host_at >= 3500U)) {
+        host_seen = 0;
+        for (unsigned i = 2; i < 9; ++i) fm1_brick_cc[i] = 0;
+    }
+    if (!host_seen && now - hello_at >= 2000U) {
         hello_at = now;
         send(0xbf, 116, 127);
     }
-    if (fm1_brick_cc[2] | fm1_brick_cc[3] | fm1_brick_cc[4]) host_seen = 1;   /* it drives the LEDs */
     fm1_brick_cc[0] = 127;
     show(host_seen ? 2 : 1);
 
