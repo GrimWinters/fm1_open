@@ -73,6 +73,15 @@ audio from a phone is played and is also the only thing in the USB
 recording, so Brickwave's effect mode has an input and no feedback loop.
 To go back, flash a normal build (or the original V15) the same way.
 
+Its screen shows what Brickwave's knobs K1-K4 turn: the page, each
+parameter's name, value and bar in its slot colour (the selected one marked
+on the left), and a status line (preset, key, motion count-in / REC).
+Brickwave sends it as SysEx when it changes, and every two seconds:
+`F0 7D 'B' 'W' 01`, page name, 0, status line, 0, then per knob: flags
+(1 used, 2 inactive, 4 bipolar, 8 selected), bar 0-127, zero 0-127, colour
+RGB565 in three 7-bit bytes (bits 0-6, 7-13, 14-15), name, 0, value, 0; `F7`.
+Text is ASCII; at most 192 bytes.
+
 ## Code
 
 - `app/screen.c`: `brick_input()` reads the panel before the pages do.

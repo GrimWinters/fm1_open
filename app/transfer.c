@@ -362,9 +362,35 @@ discard:
  * function, not the SDK's weak default, and this file is compiled without
  * LTO so that it stays one. */
 #include "fm1.h"
-static volatile unsigned sysex_ignored;
+#include <string.h>
+/* Brickwave's screen messages (F0 7D 'B' 'W' ...) wait here for the panel
+ * (app/brickwave.c); one at a time, the next is taken when this one is read. */
+static uint8_t brickwave_box[192];
+static volatile unsigned brickwave_box_length;
+static void box_barrier(void)
+{
+#ifndef FM1_HOST_TEST
+    __asm__ volatile("csync" ::: "memory");
+#endif
+}
 void fm1_app_sysex(const uint8_t *m, size_t n)
 {
-    if (m && n) sysex_ignored = sysex_ignored + 1U;
+    if (!m || n < 6 || n > sizeof brickwave_box || brickwave_box_length || m[0] != 0xf0 || m[1] != 0x7d ||
+        m[2] != 'B' || m[3] != 'W' || m[n - 1] != 0xf7)
+        return;
+    memcpy(brickwave_box, m, n);
+    box_barrier();
+    brickwave_box_length = (unsigned)n;
+    fm1_control_request();
+}
+unsigned brickwave_sysex_take(uint8_t *out, unsigned max)
+{
+    const unsigned n = brickwave_box_length;
+    if (!n) return 0;
+    const unsigned copied = n <= max ? n : 0;
+    if (copied) memcpy(out, brickwave_box, n);
+    box_barrier();
+    brickwave_box_length = 0;
+    return copied;
 }
 #endif
